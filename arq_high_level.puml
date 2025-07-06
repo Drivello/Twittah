@@ -1,0 +1,65 @@
+@startuml
+!define RECTANGLE class
+
+title Plataforma tipo Twitter – Arquitectura High Level
+
+' ====== External Client ======
+RECTANGLE Client {
+  REST API Calls
+}
+
+' ====== Gateway Service ======
+RECTANGLE GatewayService {
+  - Orquestador
+  - Produce Kafka Events
+  - Consume Kafka (opcional)
+}
+
+' ====== Microservices ======
+RECTANGLE AuthService {
+  - Validación de usuarios
+  - PostgreSQL
+}
+
+RECTANGLE UserService {
+  - Manejo de relaciones (follow/unfollow)
+  - Produce/Consume Kafka
+  - PostgreSQL
+}
+
+RECTANGLE TweetService {
+  - Manejo de tweets
+  - Fan-out on write
+  - Cache timelines (Redis)
+  - PostgreSQL
+}
+
+' ====== Message Broker ======
+RECTANGLE Kafka {
+  - Topic: tweets.published
+  - Topic: follows.created
+  - Topic: follows.deleted
+  - Topic: timelines.update
+}
+
+' ====== Databases ======
+RECTANGLE PostgreSQLAuth
+RECTANGLE PostgreSQLUser
+RECTANGLE PostgreSQLTweet
+
+RECTANGLE Redis {
+  - Cache de timelines
+}
+
+' ====== Connections ======
+Client --> GatewayService : REST Calls
+GatewayService --> Kafka : Produce events
+AuthService --> Kafka : Consume/Produce
+UserService --> Kafka : Consume/Produce
+TweetService --> Kafka : Consume/Produce
+
+AuthService --> PostgreSQLAuth
+UserService --> PostgreSQLUser
+TweetService --> PostgreSQLTweet
+TweetService --> Redis : Cache timelines
+@enduml

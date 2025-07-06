@@ -1,0 +1,73 @@
+============================================================
+            Plataforma tipo Twitter – MVP & Futuro
+============================================================
+
+Assumptions actuales (MVP)
+------------------------------------------------------------
+1. AUTENTICACIÓN
+   - Todos los usuarios son válidos. No se requiere registro/login. # Simplifica el MVP
+   - El identificador de usuario será un string en el header (X-User-Id). # Evita sesiones
+   - AuthService validará usuarios en cada request. En un principio solo responderá OK. # Delegamos validación
+
+2. TWEETS
+   - Límite máximo: 280 caracteres. # Igual a Twitter
+   - Los tweets se guardan en TweetService y son propagados a timelines vía eventos. # Escalable
+
+3. SEGUIMIENTO
+   - Los usuarios pueden seguir y dejar de seguir a otros usuarios (follower → following). # Core feature
+   - UserService maneja relaciones de seguimiento y publica eventos correspondientes. # Event-driven
+
+4. TIMELINE
+   - Timeline muestra tweets de usuarios seguidos. # Funcionalidad clave
+   - GatewayService orquesta llamadas a UserService y TweetService a través de Kafka. # Desacopla servicios
+   - TweetService limpia timelines cacheados cuando un usuario deja de seguir a otro. # Consistencia
+
+5. ARQUITECTURA
+   - Hexagonal Architecture (Ports & Adapters). # Modular y testable
+   - 4 servicios independientes:
+     • GatewayService (Orquestador) # Punto de entrada
+     • AuthService # Validación usuarios
+     • UserService # Manejo de follows
+     • TweetService # Manejo de tweets y timelines
+
+6. PERSISTENCIA
+   - PostgreSQL por servicio (independencia total de datos). # Microservicios desacoplados
+   - Redis en TweetService para cachear timelines. # Lecturas rápidas
+
+7. MENSAJERÍA
+   - Apache Kafka como bus de eventos para comunicación entre microservicios. # Alta concurrencia
+   - Topics definidos:
+     • tweets.published → nuevo tweet creado. # Notifica nuevos tweets
+     • follows.created → relación de seguimiento creada. # Notifica nuevos follows
+     • follows.deleted → relación de seguimiento eliminada. # Notifica unfollow
+     • timelines.update → actualización de timeline de usuario. # Fan-out on write
+
+8. TECNOLOGÍAS
+   - Lenguaje: Golang # Rendimiento y concurrencia
+   - Contenerización: Docker + docker-compose # Dev local sencillo
+   - Versionado: Git # Control de cambios
+
+9. TESTING
+   - Cobertura mínima: 50% en tests unitarios. # Balance velocidad/calidad para challenge
+   - Tests de integración en GatewayService y consumidores Kafka. # Validar orquestación
+
+10. ESCALABILIDAD
+    - Comunicación entre servicios: Kafka (futuro: gRPC opcional). # Desacople + performance
+    - Diseñado para millones de usuarios concurrentes. # Assumption “Somos Twitter”
+
+------------------------------------------------------------
+
+Assumptions futuras (Post-MVP)
+------------------------------------------------------------
+1. Autenticación completa con JWT (login/signup en AuthService). # Seguridad real
+2. Fan-out on write: distribuir tweets a timelines de followers al publicar. # Escalabilidad lecturas
+3. API Gateway avanzado (AWS API Gateway) para seguridad y routing. # Centraliza acceso
+4. gRPC como protocolo alternativo para microservicios. # Baja latencia
+5. Despliegue en AWS:
+   - ECS/EKS para servicios. # Autoescalado
+   - MSK (Managed Kafka) para mensajería. # Kafka administrado
+   - RDS para bases de datos PostgreSQL. # DB administrada
+   - ElastiCache para Redis. # Cache administrado
+6. Escalado horizontal: balanceadores de carga y particionamiento de datos. # Soporta tráfico masivo
+
+============================================================
