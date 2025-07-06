@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "c9a8f2e3-4e1e-4b6d-bd1b-ualagatewaymock",
+    "name": "GatewayService - Twittah",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Colección de endpoints mockeados del GatewayService para Twittah."
+  },
+  "item": [
+    {
+      "name": "Publicar Tweet",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "123" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Hola mundo desde Postman!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/tweets",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["tweets"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Seguir Usuario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-User-Id", "value": "123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/follow/456",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["follow", "456"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Dejar de Seguir Usuario",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "X-User-Id", "value": "123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/unfollow/456",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["unfollow", "456"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ver Timeline",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-User-Id", "value": "123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/timeline",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["timeline"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
