@@ -33,6 +33,33 @@ El sistema está compuesto por 4 microservicios desacoplados:
 
 ---
 
+## 🏗️ Diagrama de Arquitectura
+
+```plaintext
+                        ┌─────────────┐
+                        │   Cliente   │
+                        └──────▲──────┘
+                               │ REST API
+                      ┌────────┴────────┐
+                      │ GatewayService  │
+                      └────────┬────────┘
+          ┌────────────────────┼────────────────────┐
+          ▼                    ▼                    ▼
+   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+   │ AuthService  │     │ UserService  │     │ TweetService │
+   └──────▲───────┘     └──────▲───────┘     └──────▲───────┘
+          │ Kafka Events       │ Kafka Events       │ Kafka Events
+          ▼                    ▼                    ▼
+     PostgreSQL           PostgreSQL           PostgreSQL
+                              │                      │
+                              └──────────┬───────────┘
+                                         ▼
+                                      Redis
+                            (Cache timelines por usuario)
+```                           
+
+---
+
 ## 🚀 Como utilizar esta APP
 
 Detalles en [`HowToUseThisApp.md`](./HowToUseThisApp.md)
