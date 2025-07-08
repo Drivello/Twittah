@@ -31,14 +31,14 @@ type UserMutation struct {
 	config
 	op               Op
 	typ              string
-	id               *int
+	id               *string
 	username         *string
 	clearedFields    map[string]struct{}
-	following        map[int]struct{}
-	removedfollowing map[int]struct{}
+	following        map[string]struct{}
+	removedfollowing map[string]struct{}
 	clearedfollowing bool
-	followers        map[int]struct{}
-	removedfollowers map[int]struct{}
+	followers        map[string]struct{}
+	removedfollowers map[string]struct{}
 	clearedfollowers bool
 	done             bool
 	oldValue         func(context.Context) (*User, error)
@@ -65,7 +65,7 @@ func newUserMutation(c config, op Op, opts ...userOption) *UserMutation {
 }
 
 // withUserID sets the ID field of the mutation.
-func withUserID(id int) userOption {
+func withUserID(id string) userOption {
 	return func(m *UserMutation) {
 		var (
 			err   error
@@ -115,9 +115,15 @@ func (m UserMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of User entities.
+func (m *UserMutation) SetID(id string) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *UserMutation) ID() (id int, exists bool) {
+func (m *UserMutation) ID() (id string, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -128,12 +134,12 @@ func (m *UserMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *UserMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *UserMutation) IDs(ctx context.Context) ([]string, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []string{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -180,9 +186,9 @@ func (m *UserMutation) ResetUsername() {
 }
 
 // AddFollowingIDs adds the "following" edge to the User entity by ids.
-func (m *UserMutation) AddFollowingIDs(ids ...int) {
+func (m *UserMutation) AddFollowingIDs(ids ...string) {
 	if m.following == nil {
-		m.following = make(map[int]struct{})
+		m.following = make(map[string]struct{})
 	}
 	for i := range ids {
 		m.following[ids[i]] = struct{}{}
@@ -200,9 +206,9 @@ func (m *UserMutation) FollowingCleared() bool {
 }
 
 // RemoveFollowingIDs removes the "following" edge to the User entity by IDs.
-func (m *UserMutation) RemoveFollowingIDs(ids ...int) {
+func (m *UserMutation) RemoveFollowingIDs(ids ...string) {
 	if m.removedfollowing == nil {
-		m.removedfollowing = make(map[int]struct{})
+		m.removedfollowing = make(map[string]struct{})
 	}
 	for i := range ids {
 		delete(m.following, ids[i])
@@ -211,7 +217,7 @@ func (m *UserMutation) RemoveFollowingIDs(ids ...int) {
 }
 
 // RemovedFollowing returns the removed IDs of the "following" edge to the User entity.
-func (m *UserMutation) RemovedFollowingIDs() (ids []int) {
+func (m *UserMutation) RemovedFollowingIDs() (ids []string) {
 	for id := range m.removedfollowing {
 		ids = append(ids, id)
 	}
@@ -219,7 +225,7 @@ func (m *UserMutation) RemovedFollowingIDs() (ids []int) {
 }
 
 // FollowingIDs returns the "following" edge IDs in the mutation.
-func (m *UserMutation) FollowingIDs() (ids []int) {
+func (m *UserMutation) FollowingIDs() (ids []string) {
 	for id := range m.following {
 		ids = append(ids, id)
 	}
@@ -234,9 +240,9 @@ func (m *UserMutation) ResetFollowing() {
 }
 
 // AddFollowerIDs adds the "followers" edge to the User entity by ids.
-func (m *UserMutation) AddFollowerIDs(ids ...int) {
+func (m *UserMutation) AddFollowerIDs(ids ...string) {
 	if m.followers == nil {
-		m.followers = make(map[int]struct{})
+		m.followers = make(map[string]struct{})
 	}
 	for i := range ids {
 		m.followers[ids[i]] = struct{}{}
@@ -254,9 +260,9 @@ func (m *UserMutation) FollowersCleared() bool {
 }
 
 // RemoveFollowerIDs removes the "followers" edge to the User entity by IDs.
-func (m *UserMutation) RemoveFollowerIDs(ids ...int) {
+func (m *UserMutation) RemoveFollowerIDs(ids ...string) {
 	if m.removedfollowers == nil {
-		m.removedfollowers = make(map[int]struct{})
+		m.removedfollowers = make(map[string]struct{})
 	}
 	for i := range ids {
 		delete(m.followers, ids[i])
@@ -265,7 +271,7 @@ func (m *UserMutation) RemoveFollowerIDs(ids ...int) {
 }
 
 // RemovedFollowers returns the removed IDs of the "followers" edge to the User entity.
-func (m *UserMutation) RemovedFollowersIDs() (ids []int) {
+func (m *UserMutation) RemovedFollowersIDs() (ids []string) {
 	for id := range m.removedfollowers {
 		ids = append(ids, id)
 	}
@@ -273,7 +279,7 @@ func (m *UserMutation) RemovedFollowersIDs() (ids []int) {
 }
 
 // FollowersIDs returns the "followers" edge IDs in the mutation.
-func (m *UserMutation) FollowersIDs() (ids []int) {
+func (m *UserMutation) FollowersIDs() (ids []string) {
 	for id := range m.followers {
 		ids = append(ids, id)
 	}

@@ -10,7 +10,7 @@ import (
 var (
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "username", Type: field.TypeString, Unique: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
@@ -21,8 +21,8 @@ var (
 	}
 	// UserFollowingColumns holds the columns for the "user_following" table.
 	UserFollowingColumns = []*schema.Column{
-		{Name: "user_id", Type: field.TypeInt},
-		{Name: "follower_id", Type: field.TypeInt},
+		{Name: "user_id", Type: field.TypeString},
+		{Name: "follower_id", Type: field.TypeString},
 	}
 	// UserFollowingTable holds the schema information for the "user_following" table.
 	UserFollowingTable = &schema.Table{

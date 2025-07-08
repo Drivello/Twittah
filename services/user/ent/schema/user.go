@@ -14,6 +14,10 @@ type User struct {
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
+		field.String("id").
+			NotEmpty().
+			Immutable().
+			Unique(),
 		field.String("username").
 			NotEmpty().
 			Unique(),
@@ -24,8 +28,6 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("following", User.Type),
-
-		edge.From("followers", User.Type).
-			Ref("following"),
+		edge.From("followers", User.Type).Ref("following"),
 	}
 }
