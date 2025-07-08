@@ -6,6 +6,7 @@ import (
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type userUseCase struct {
@@ -27,4 +28,12 @@ func (uc *userUseCase) RegisterUser(ctx context.Context, user *domain.User) (int
 	}
 	zap.L().Info("[UseCase] User successfully persisted", zap.Int64("id", userID))
 	return userID, nil
+}
+
+func hashPassword(password string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		panic("failed to hash password")
+	}
+	return string(hash)
 }
