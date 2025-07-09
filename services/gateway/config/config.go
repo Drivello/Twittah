@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
@@ -17,20 +18,20 @@ type GatewayConfig struct {
 func LoadConfig() (*GatewayConfig, error) {
 	port := os.Getenv("GATEWAY_PORT")
 	if port == "" {
-		port = "8081"
+		return nil, fmt.Errorf("GATEWAY_PORT env var required")
 	}
 	brokersStr := os.Getenv("KAFKA_BROKERS")
-	brokers := []string{"localhost:9092"}
-	if brokersStr != "" {
-		brokers = strings.Split(brokersStr, ",")
+	if brokersStr == "" {
+		return nil, fmt.Errorf("KAFKA_BROKERS env var required")
 	}
+	brokers := strings.Split(brokersStr, ",")
 	followsTopic := os.Getenv("KAFKA_FOLLOWS_TOPIC")
 	if followsTopic == "" {
-		followsTopic = "follows"
+		return nil, fmt.Errorf("KAFKA_FOLLOWS_TOPIC env var required")
 	}
 	userTopic := os.Getenv("KAFKA_USER_TOPIC")
 	if userTopic == "" {
-		userTopic = "user_created"
+		return nil, fmt.Errorf("KAFKA_USER_TOPIC env var required")
 	}
 	return &GatewayConfig{
 		Port: port,

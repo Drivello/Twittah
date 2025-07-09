@@ -10,6 +10,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_service ./cmd/main.go
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/gateway_service ./gateway_service
-EXPOSE 8080
-ENV GATEWAY_PORT=8080
+EXPOSE 8081
+ENV GATEWAY_PORT=8081
 ENTRYPOINT ["/app/gateway_service"]
