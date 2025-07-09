@@ -15,7 +15,10 @@ func main() {
 	logger := config.InitLogger()
 	defer logger.Sync()
 
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.Sugar().Fatalw("failed to load config", "error", err)
+	}
 
 	client, err := config.InitEntClient(cfg.PostgresDSN)
 	if err != nil {
@@ -23,13 +26,11 @@ func main() {
 	}
 	defer client.Close()
 
-	brokers := config.ParseKafkaBrokers(cfg.KafkaBrokers)
-
 	repo := postgres.NewEntUserRepository(client)
 	followUC := usecase.NewFollowUserUseCase(repo, nil)
 	unfollowUC := usecase.NewUnfollowUserUseCase(repo, nil)
 
-	producer, err := kafka.StartAllKafkaConsumers(repo, brokers, logger)
+	producer, err := kafka.StartAllKafkaConsumers(repo, cfg.KafkaBrokers, logger)
 	if err != nil {
 		logger.Sugar().Fatalw("failed to start Kafka consumers", "error", err)
 	}
@@ -39,11 +40,7 @@ func main() {
 	r := gin.Default()
 	handler.RegisterRoutes(r)
 
-	port := cfg.ServicePort
-	if port == "" {
-		port = "8082"
-	}
-	if err := r.Run(":" + port); err != nil {
+	if err := r.Run(":" + cfg.ServicePort); err != nil {
 		logger.Sugar().Fatalw("failed to run http server", "error", err)
 	}
 }

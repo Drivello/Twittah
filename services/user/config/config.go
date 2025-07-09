@@ -1,13 +1,13 @@
 package config
 
 import (
-	"log"
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
-	"go.uber.org/zap"
 	"github.com/Drivello/Twittah/services/user/ent"
-	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 // Config holds all configuration for the UserService.
@@ -43,23 +43,30 @@ func ParseKafkaBrokers(brokers []string) []string {
 	return brokers
 }
 
-func LoadConfig() *Config {
-	viper.SetConfigFile(".env")
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("No .env file found, relying on environment variables")
+// LoadConfig loads configuration from environment variables or .env file.
+// LoadConfig loads configuration from environment variables. Returns a pointer to Config and error if any variable is missing.
+func LoadConfig() (*Config, error) {
+	postgresDSN := os.Getenv("POSTGRES_DSN")
+	if postgresDSN == "" {
+		return nil, fmt.Errorf("POSTGRES_DSN env var required")
 	}
-
-	cfg := &Config{
-		PostgresDSN:  viper.GetString("POSTGRES_DSN"),
-		RedisAddr:    viper.GetString("REDIS_ADDR"),
-		KafkaBrokers: viper.GetStringSlice("KAFKA_BROKERS"),
-		ServicePort:  viper.GetString("USER_SERVICE_PORT"),
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		return nil, fmt.Errorf("REDIS_ADDR env var required")
 	}
-
-	if cfg.ServicePort == "" {
-		cfg.ServicePort = "8082"
+	brokersStr := os.Getenv("KAFKA_BROKERS")
+	if brokersStr == "" {
+		return nil, fmt.Errorf("KAFKA_BROKERS env var required")
 	}
-	return cfg
+	brokers := strings.Split(brokersStr, ",")
+	servicePort := os.Getenv("USER_SERVICE_PORT")
+	if servicePort == "" {
+		return nil, fmt.Errorf("USER_SERVICE_PORT env var required")
+	}
+	return &Config{
+		PostgresDSN:  postgresDSN,
+		RedisAddr:    redisAddr,
+		KafkaBrokers: brokers,
+		ServicePort:  servicePort,
+	}, nil
 }
