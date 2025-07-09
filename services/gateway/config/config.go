@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GatewayConfig holds all configuration for the Gateway Service.
 type GatewayConfig struct {
 	Port            string
 	KafkaBrokers    []string
@@ -15,6 +16,8 @@ type GatewayConfig struct {
 	KafkaUserTopic  string
 }
 
+// LoadConfig loads all required configuration from environment variables.
+// Returns a pointer to GatewayConfig and error if any variable is missing.
 func LoadConfig() (*GatewayConfig, error) {
 	port := os.Getenv("GATEWAY_PORT")
 	if port == "" {
