@@ -1,0 +1,50 @@
+{
+  "info": {
+    "_postman_id": "b3e6c3b6-1c5e-4a4a-8c5f-6b6c3b6a8c5f",
+    "name": "TweetService API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Colección de pruebas para TweetService (POST /tweets, GET /timeline)"
+  },
+  "item": [
+    {
+      "name": "Crear Tweet",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"author_id\": \"u1\",\n  \"content\": \"Hola mundo desde Postman!\",\n  \"followers\": [\"f2\", \"f3\"]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8084/tweets",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8084",
+          "path": ["tweets"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Obtener Timeline",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8084/timeline?user_id=u1&limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8084",
+          "path": ["timeline"],
+          "query": [
+            { "key": "user_id", "value": "u1" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

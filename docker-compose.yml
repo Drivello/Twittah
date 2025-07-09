@@ -123,6 +123,61 @@ services:
     ports:
       - "8083:8083"
 
+  postgres-tweet:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: tweet
+      POSTGRES_PASSWORD: tweet
+      POSTGRES_DB: tweet
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-tweet:/var/lib/postgresql/data
+      - ./initdb/tweet:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tweet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-tweet:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata-tweet:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  tweet:
+    build:
+      context: ./services/tweet
+    env_file:
+      - ./services/tweet/.env-example
+    environment:
+      POSTGRES_DSN: "host=postgres-tweet user=tweet password=tweet dbname=tweet sslmode=disable"
+      REDIS_ADDR: "redis-tweet:6379"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_GROUP_ID: "tweet-service-group"
+      SERVICE_PORT: 8084
+      TIMELINE_TTL_HOURS: 24
+    depends_on:
+      postgres-tweet:
+        condition: service_healthy
+      redis-tweet:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+
 volumes:
   pgdata-auth:
   pgdata-user:
+  pgdata-tweet:
+  redisdata-tweet:
