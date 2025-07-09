@@ -3,27 +3,27 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/Drivello/Twittah/services/tweet/config"
-	// "github.com/Drivello/Twittah/services/tweet/ent" // Disabled: ent package not generated
+	"github.com/Drivello/Twittah/services/tweet/ent"
 	tweethttp "github.com/Drivello/Twittah/services/tweet/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/postgres"
 	redisadapter "github.com/Drivello/Twittah/services/tweet/internal/adapters/redis"
-	redis "github.com/go-redis/redis/v8"
+	"github.com/Drivello/Twittah/services/tweet/internal/common"
 	"github.com/Drivello/Twittah/services/tweet/internal/usecase"
 	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
+	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )
 
 func main() {
-	logger, _ := zap.NewProduction()
+	logger := common.Logger()
 	defer logger.Sync()
 
 	cfg, err := config.LoadConfig()
@@ -33,15 +33,13 @@ func main() {
 	}
 
 	// Wire Ent client
-	// TODO: Enable Ent ORM when ent is generated
-	// entClient, err := ent.Open("postgres", cfg.PostgresDSN)
-	// if err != nil {
-	// 	logger.Sugar().Fatalw("failed to connect to postgres", "error", err)
-	// 	os.Exit(1)
-	// }
-	// defer // entClient.Close() // Disabled: ent not generated
-	// repo := postgres.NewEntTweetRepository(entClient)
-	repo := postgres.NewEntTweetRepository(nil)
+	entClient, err := ent.Open("postgres", cfg.PostgresDSN)
+	if err != nil {
+		logger.Sugar().Fatalw("failed to connect to postgres", "error", err)
+		os.Exit(1)
+	}
+	defer entClient.Close()
+	repo := postgres.NewEntTweetRepository(entClient)
 
 	// Wire Redis client
 	redisClient := redis.NewClient(&redis.Options{
@@ -83,7 +81,7 @@ func main() {
 	// Instantiate real Kafka adapters
 	producerAdapter := kafka.NewTimelineProducer(producer, logger)
 	// Creamos el handler de consumidor Kafka con soporte DLQ
-consumerHandler := kafka.NewConsumerGroupHandler(publishUC, timelineUC, cache, logger, producer)
+	consumerHandler := kafka.NewConsumerGroupHandler(publishUC, timelineUC, cache, logger, producer)
 
 	go func() {
 		for {
@@ -100,7 +98,7 @@ consumerHandler := kafka.NewConsumerGroupHandler(publishUC, timelineUC, cache, l
 	handler := tweethttp.NewTweetHandler(publishUC, timelineUC)
 	handler.RegisterRoutes(router)
 
-	log.Printf("TweetService starting on port %s", cfg.ServicePort)
+	logger.Info("TweetService starting", zap.String("port", cfg.ServicePort))
 
 	// Graceful shutdown setup
 	srv := &http.Server{

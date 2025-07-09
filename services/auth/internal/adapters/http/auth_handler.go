@@ -24,6 +24,6 @@ func (h *AuthHandler) RegisterRoutes(r *gin.Engine) {
 // It should be replaced with real validation logic.
 // c: Gin context for the HTTP request.
 func (h *AuthHandler) Validate(c *gin.Context) {
-	// TODO: Implement validation logic
-	c.JSON(200, gin.H{"status": "OK"})
+	resp := ValidateResponseDTO{Status: "OK"}
+	c.JSON(200, resp)
 }

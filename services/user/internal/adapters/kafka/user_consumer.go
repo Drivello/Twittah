@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Drivello/Twittah/services/user/internal/domain"
 	"github.com/Drivello/Twittah/services/user/internal/usecase"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
@@ -70,7 +69,7 @@ func (h *userEventHandler) Setup(_ sarama.ConsumerGroupSession) error   { return
 func (h *userEventHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 func (h *userEventHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		var event domain.FollowEvent
+		var event FollowEventDTO
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
 			zap.S().Errorw("Failed to unmarshal follow event", "error", err)
 			sess.MarkMessage(msg, "")

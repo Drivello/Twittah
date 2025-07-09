@@ -3,33 +3,45 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
 
 	"github.com/Drivello/Twittah/services/tweet/config"
+	"github.com/Drivello/Twittah/services/tweet/internal/domain"
 	"github.com/Drivello/Twittah/services/tweet/internal/ports"
 	"github.com/Drivello/Twittah/services/tweet/internal/usecase"
 )
 
+// parseTimeOrNow parses an RFC3339 string or returns time.Now() if invalid
+func parseTimeOrNow(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return time.Now()
+	}
+	return t
+}
+
 // ConsumerGroupHandler handles Kafka events for TweetService.
 // ConsumerGroupHandler handles Kafka events for TweetService, including retries and DLQ.
 type ConsumerGroupHandler struct {
-	publishUC    *usecase.PublishTweet
-	timelineUC   *usecase.GetTimeline
-	cache        ports.Cache
-	logger       *zap.Logger
-	dlqProducer  sarama.SyncProducer // Producer for sending failed messages to DLQ
+	publishUC   *usecase.PublishTweet
+	timelineUC  *usecase.GetTimeline
+	cache       ports.Cache
+	logger      *zap.Logger
+	dlqProducer sarama.SyncProducer // Producer for sending failed messages to DLQ
 }
 
 // NewConsumerGroupHandler creates a new ConsumerGroupHandler.
 // NewConsumerGroupHandler creates a new ConsumerGroupHandler.
 func NewConsumerGroupHandler(publishUC *usecase.PublishTweet, timelineUC *usecase.GetTimeline, cache ports.Cache, logger *zap.Logger, dlqProducer sarama.SyncProducer) *ConsumerGroupHandler {
 	return &ConsumerGroupHandler{
-		publishUC:  publishUC,
-		timelineUC: timelineUC,
-		cache:      cache,
-		logger:     logger,
+		publishUC:   publishUC,
+		timelineUC:  timelineUC,
+		cache:       cache,
+		logger:      logger,
 		dlqProducer: dlqProducer,
 	}
 }
@@ -85,23 +97,42 @@ func (h *ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cl
 // handleTweetPublished processes a tweet published event from Kafka.
 // Returns an error if processing fails.
 func (h *ConsumerGroupHandler) handleTweetPublished(msg *sarama.ConsumerMessage) error {
-	// TODO: Unmarshal event and call publishUC if needed
-	h.logger.Sugar().Infow("handleTweetPublished stub", "value", string(msg.Value))
-	return nil // Cambia esto por error real si implementas lógica
+	var dto TweetPublishedEventDTO
+	if err := json.Unmarshal(msg.Value, &dto); err != nil {
+		h.logger.Sugar().Errorw("invalid tweet published event", "error", err)
+		return err
+	}
+	domainTweet := &domain.Tweet{
+		ID:        dto.ID,
+		AuthorID:  dto.AuthorID,
+		Content:   dto.Content,
+		CreatedAt: parseTimeOrNow(dto.CreatedAt),
+	}
+	return h.publishUC.Execute(context.Background(), domainTweet, nil)
 }
 
 // handleFollowCreated processes a follow created event from Kafka.
 // Returns an error if processing fails.
 func (h *ConsumerGroupHandler) handleFollowCreated(msg *sarama.ConsumerMessage) error {
-	// TODO: Unmarshal event and update timeline cache
-	h.logger.Sugar().Infow("handleFollowCreated stub", "value", string(msg.Value))
-	return nil // Cambia esto por error real si implementas lógica
+	var dto FollowCreatedEventDTO
+	if err := json.Unmarshal(msg.Value, &dto); err != nil {
+		h.logger.Sugar().Errorw("invalid follow created event", "error", err)
+		return err
+	}
+	// TODO: Implementar lógica de actualización de timeline para follow creado
+	// Por ahora, no se realiza ninguna acción
+	return nil
 }
 
 // handleFollowDeleted processes a follow deleted event from Kafka.
 // Returns an error if processing fails.
 func (h *ConsumerGroupHandler) handleFollowDeleted(msg *sarama.ConsumerMessage) error {
-	// TODO: Unmarshal event and update timeline cache
-	h.logger.Sugar().Infow("handleFollowDeleted stub", "value", string(msg.Value))
-	return nil // Cambia esto por error real si implementas lógica
+	var dto FollowDeletedEventDTO
+	if err := json.Unmarshal(msg.Value, &dto); err != nil {
+		h.logger.Sugar().Errorw("invalid follow deleted event", "error", err)
+		return err
+	}
+	// TODO: Implementar lógica de actualización de timeline para follow eliminado
+	// Por ahora, no se realiza ninguna acción
+	return nil
 }

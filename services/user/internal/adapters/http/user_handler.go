@@ -49,7 +49,8 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"followers": followers})
+	resp := FollowersResponseDTO{Followers: followers}
+	c.JSON(200, resp)
 }
 
 func (h *UserHandler) GetFollowing(c *gin.Context) {
@@ -64,5 +65,6 @@ func (h *UserHandler) GetFollowing(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"following": following})
+	resp := FollowingResponseDTO{Following: following}
+	c.JSON(200, resp)
 }

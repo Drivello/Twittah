@@ -1,13 +1,16 @@
 package http
 
+import "strings"
+
 import (
-	"net/http"
 	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler handles authentication HTTP endpoints.
 type AuthHandler struct {
+	Kafka KafkaTopicLister // Interfaz que exponga Topics() ([]string, error)
+
 	UserUseCase *usecase.UserUseCase
 }
 
@@ -21,46 +24,87 @@ func NewAuthHandler(useCase *usecase.UserUseCase) *AuthHandler {
 // RegisterRoutes registers auth endpoints on the given Gin router group.
 // rg: Gin router group to register routes on.
 func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
+	rg.GET("/health", h.Health)
+
 	rg.POST("/register", h.RegisterUser)
 	rg.POST("/validate", h.ValidateAuth)
 	rg.POST("/deactivate", h.DeactivateUser)
 }
 
-type RegisterUserRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
+
 
 // RegisterUser handles user registration requests.
 // c: Gin context.
+// Health handles GET /health for deep readiness check.
+func (h *AuthHandler) Health(c *gin.Context) {
+	status := map[string]string{}
+	ok := true
+	requiredTopics := []string{"tweets.published", "follows.created", "follows.deleted", "timelines.updated"}
+	if h.Kafka != nil {
+		topics, err := h.Kafka.Topics()
+		topicsMap := map[string]bool{}
+		for _, t := range topics {
+			topicsMap[t] = true
+		}
+		if err != nil {
+			status["kafka"] = err.Error()
+			ok = false
+		} else {
+			missing := []string{}
+			for _, t := range requiredTopics {
+				if !topicsMap[t] {
+					missing = append(missing, t)
+				}
+			}
+			if len(missing) > 0 {
+				status["kafka"] = "missing topics: " + strings.Join(missing, ", ")
+				ok = false
+			} else {
+				status["kafka"] = "ok"
+			}
+		}
+	} else {
+		status["kafka"] = "not configured"
+		ok = false
+	}
+
+	if ok {
+		c.JSON(200, status)
+	} else {
+		c.JSON(500, status)
+	}
+}
+
 func (h *AuthHandler) RegisterUser(c *gin.Context) {
-	var req RegisterUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request"})
+	var reqDTO RegisterUserRequestDTO
+	if err := c.ShouldBindJSON(&reqDTO); err != nil {
+		c.JSON(400, RegisterUserResponseDTO{Message: "Invalid request"})
 		return
 	}
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		c.JSON(400, gin.H{"error": "Missing required fields"})
+	if reqDTO.Username == "" || reqDTO.Email == "" || reqDTO.Password == "" {
+		c.JSON(400, RegisterUserResponseDTO{Message: "Missing required fields"})
 		return
 	}
-	if err := h.UserUseCase.RegisterUser(req.Username, req.Email, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo registrar el usuario"})
+	if err := h.UserUseCase.RegisterUser(reqDTO.Username, reqDTO.Email, reqDTO.Password); err != nil {
+		c.JSON(500, RegisterUserResponseDTO{Message: "No se pudo registrar el usuario"})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Usuario registrado", "username": req.Username})
+	resp := RegisterUserResponseDTO{Message: "Usuario registrado", Username: reqDTO.Username}
+	c.JSON(201, resp)
 }
 
 // DeactivateUser handles user deactivation requests (mock).
 // c: Gin context.
 func (h *AuthHandler) DeactivateUser(c *gin.Context) {
 	// TODO: Implementar desactivación real
-	c.JSON(http.StatusOK, gin.H{"message": "Usuario desactivado (mock)"})
+	resp := DeactivateUserResponseDTO{Message: "Usuario desactivado (mock)"}
+	c.JSON(200, resp)
 }
 
 // ValidateAuth handles user authentication validation requests (mock).
 // c: Gin context.
 func (h *AuthHandler) ValidateAuth(c *gin.Context) {
-	// TODO: Implementar validacion real
-	c.JSON(http.StatusOK, gin.H{"message": "Autenticación exitosa (mock)"})
+	// TODO: Implementar validación real
+	resp := ValidateAuthResponseDTO{Message: "Autenticación exitosa (mock)"}
+	c.JSON(200, resp)
 }
