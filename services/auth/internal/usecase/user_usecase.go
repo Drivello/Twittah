@@ -19,7 +19,12 @@ func NewUserUseCasePort(repo ports.UserRepository) ports.UserUseCasePort {
 
 func (uc *userUseCase) RegisterUser(ctx context.Context, user *domain.User) (int64, error) {
 	zap.L().Info("[UseCase] Starting user registration", zap.String("username", user.Username))
-	user.Password = hashPassword(user.Password)
+	hashed, err := hashPassword(user.Password)
+	if err != nil {
+		zap.L().Error("[UseCase] Failed to hash password", zap.Error(err))
+		return 0, err
+	}
+	user.Password = hashed
 	zap.L().Debug("[UseCase] Password hashed")
 	userID, err := uc.repo.CreateUser(ctx, user)
 	if err != nil {
@@ -30,10 +35,10 @@ func (uc *userUseCase) RegisterUser(ctx context.Context, user *domain.User) (int
 	return userID, nil
 }
 
-func hashPassword(password string) string {
+func hashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		panic("failed to hash password")
+		return "", err
 	}
-	return string(hash)
+	return string(hash), nil
 }

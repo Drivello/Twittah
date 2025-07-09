@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 
 	"github.com/Drivello/Twittah/services/auth/config"
 	"github.com/Drivello/Twittah/services/auth/ent"
@@ -14,7 +13,8 @@ import (
 )
 
 func main() {
-	zap.L().Info("[Startup] AuthService is starting up...")
+	config.InitZapLogger()
+
 	cfg := config.LoadConfig()
 
 	producer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, "user_created")
@@ -23,7 +23,7 @@ func main() {
 	}
 
 	// Instantiate repository and usecase layer
-	entClient, err := ent.Open("postgres", os.Getenv("DATABASE_URL"))
+	entClient, err := ent.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		zap.L().Fatal("Failed to connect to database", zap.Error(err))
 	}

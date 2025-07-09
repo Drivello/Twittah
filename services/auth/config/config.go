@@ -28,16 +28,9 @@ type DLQWorkerConfig struct {
 type Config struct {
 	Port         string
 	KafkaBrokers []string
+	DatabaseURL  string
 	Retry        RetryConfig
 	DLQWorker    DLQWorkerConfig
-}
-
-// getEnv returns the value of the environment variable or a default if not set.
-func getEnv(key, defaultVal string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return defaultVal
 }
 
 // getEnvAsDuration parses an environment variable as a time.Duration or returns the default.
@@ -55,30 +48,38 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 
 // LoadConfig loads configuration from environment variables and returns a Config struct.
 func LoadConfig() *Config {
-	port := getEnv("AUTH_PORT", "8083")
-	brokers := getEnv("KAFKA_BROKERS", "")
+	port := os.Getenv("AUTH_PORT")
+	brokers := os.Getenv("KAFKA_BROKERS")
+	databaseURL := os.Getenv("DATABASE_URL")
+
+	if port == "" {
+		zap.L().Fatal("AUTH_PORT env var required")
+	}
 	if brokers == "" {
 		zap.L().Fatal("KAFKA_BROKERS env var required")
 	}
-
-	retryCfg := RetryConfig{
-		MaxRetryDuration: getEnvAsDuration("RETRY_MAX_DURATION", 2*time.Hour),
-		MaxBackoff:       getEnvAsDuration("RETRY_MAX_BACKOFF", 30*time.Second),
-		InitialBackoff:   getEnvAsDuration("RETRY_INITIAL_BACKOFF", 500*time.Millisecond),
-		DLQTopic:         getEnv("RETRY_DLQ_TOPIC", "user_created_dlq"),
+	if databaseURL == "" {
+		zap.L().Fatal("DATABASE_URL env var required")
 	}
 
+	retryCfg := RetryConfig{
+		MaxRetryDuration: getEnvAsDuration("RETRY_MAX_DURATION", 0),
+		MaxBackoff:       getEnvAsDuration("RETRY_MAX_BACKOFF", 0),
+		InitialBackoff:   getEnvAsDuration("RETRY_INITIAL_BACKOFF", 0),
+		DLQTopic:         os.Getenv("RETRY_DLQ_TOPIC"),
+	}
 	dlqWorkerCfg := DLQWorkerConfig{
-		MaxRetryDuration: getEnvAsDuration("DLQ_WORKER_MAX_DURATION", 1*time.Hour),
-		MaxBackoff:       getEnvAsDuration("DLQ_WORKER_MAX_BACKOFF", 5*time.Minute),
-		InitialBackoff:   getEnvAsDuration("DLQ_WORKER_INITIAL_BACKOFF", 5*time.Second),
-		SourceTopic:      getEnv("DLQ_WORKER_SOURCE_TOPIC", "user_created_dlq"),
-		FinalDLQTopic:    getEnv("DLQ_WORKER_FINAL_DLQ_TOPIC", "user_created_dlq_final"),
+		MaxRetryDuration: getEnvAsDuration("DLQ_WORKER_MAX_DURATION", 0),
+		MaxBackoff:       getEnvAsDuration("DLQ_WORKER_MAX_BACKOFF", 0),
+		InitialBackoff:   getEnvAsDuration("DLQ_WORKER_INITIAL_BACKOFF", 0),
+		SourceTopic:      os.Getenv("DLQ_WORKER_SOURCE_TOPIC"),
+		FinalDLQTopic:    os.Getenv("DLQ_WORKER_FINAL_DLQ_TOPIC"),
 	}
 
 	return &Config{
 		Port:         port,
 		KafkaBrokers: []string{brokers},
+		DatabaseURL:  databaseURL,
 		Retry:        retryCfg,
 		DLQWorker:    dlqWorkerCfg,
 	}
