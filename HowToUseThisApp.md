@@ -12,10 +12,15 @@ Asegúrate de tener Docker y Docker Compose instalados.
 docker-compose up --build
 ```
 
-La API Gateway estará disponible en:
-```
-http://localhost:8080
-```
+Esto levantará:
+- **Gateway** (http://localhost:8080) – No usa base de datos
+- **UserService** (http://localhost:8082) – Usa Postgres para relaciones follow/unfollow
+- **Kafka & Zookeeper** (eventos asíncronos)
+- **Postgres** (solo para UserService)
+
+La base de datos y la tabla `follows` se crean automáticamente con los scripts en `initdb/`.
+
+---
 
 ---
 
@@ -112,8 +117,10 @@ curl http://localhost:8080/timeline   -H "X-User-Id: 123"
 
 ## 💡 Notas importantes
 - El header `X-User-Id` es **obligatorio** para todas las requests.
-- Todos los writes (publicar tweet, follow/unfollow) son **asíncronos**.
-- Las lecturas (timeline) son **tiempo real** gracias a Redis cache.
+- Todos los writes (publicar tweet, follow/unfollow) son **asíncronos** vía Kafka.
+- **Solo UserService tiene base de datos** (Postgres). Gateway no almacena nada.
+- Si borras los volúmenes de Docker, la base y tablas se recrean automáticamente gracias a los scripts `.sql` en `initdb/`.
+- Puedes agregar más tablas para UserService agregando scripts SQL en ese directorio.
 
 ---
 

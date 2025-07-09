@@ -82,7 +82,8 @@ func main() {
 
 	// Instantiate real Kafka adapters
 	producerAdapter := kafka.NewTimelineProducer(producer, logger)
-	consumerHandler := kafka.NewConsumerGroupHandler(publishUC, timelineUC, cache, logger)
+	// Creamos el handler de consumidor Kafka con soporte DLQ
+consumerHandler := kafka.NewConsumerGroupHandler(publishUC, timelineUC, cache, logger, producer)
 
 	go func() {
 		for {
