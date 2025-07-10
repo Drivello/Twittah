@@ -27,13 +27,11 @@ func NewUserEventProducer(brokers []string, topic string) (*UserEventProducer, e
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
-		common.Logger().Errorw("Failed to create follow kafka producer", "error", err)
 		return nil, err
 	}
+	common.Logger().Debug("UserEventProducer created", "topic ", topic)
 	return &UserEventProducer{producer: producer, topic: topic}, nil
 }
-
-
 
 // PublishFollow publishes a follow event to Kafka.
 // followerID: ID of the user following.

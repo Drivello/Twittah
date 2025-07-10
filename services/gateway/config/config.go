@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
+	"github.com/Drivello/Twittah/services/gateway/internal/common"
 )
 
 // GatewayConfig holds all configuration for the Gateway Service.
@@ -65,16 +66,19 @@ func LoadConfig() (*GatewayConfig, error) {
 }
 
 func InitKafkaProducers(cfg *GatewayConfig) (*kafka.AuthEventProducer, *kafka.UserEventProducer, *kafka.TweetEventProducer, error) {
-	authProducer, err := kafka.NewAuthEventProducer(cfg.KafkaBrokers, cfg.KafkaFollowTopic)
+	authProducer, err := kafka.NewAuthEventProducer(cfg.KafkaBrokers, cfg.KafkaUserTopic)
 	if err != nil {
+		common.Logger().Errorw("Failed to create auth kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
-	userProducer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaUserTopic)
+	userProducer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaFollowTopic)
 	if err != nil {
+		common.Logger().Errorw("Failed to create user kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
 	tweetProducer, err := kafka.NewTweetEventProducer(cfg.KafkaBrokers, cfg.KafkaTweetTopic)
 	if err != nil {
+		common.Logger().Errorw("Failed to create tweet kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
 	return authProducer, userProducer, tweetProducer, nil

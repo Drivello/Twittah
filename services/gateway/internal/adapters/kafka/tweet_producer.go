@@ -30,9 +30,9 @@ func NewTweetEventProducer(brokers []string, topic string) (*TweetEventProducer,
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
-		common.Logger().Errorw("Failed to create tweet kafka producer", "error", err)
 		return nil, err
 	}
+	common.Logger().Debug("TweetEventProducer created", "topic ", topic)
 	return &TweetEventProducer{Producer: producer, createTweetTopic: topic}, nil
 }
 

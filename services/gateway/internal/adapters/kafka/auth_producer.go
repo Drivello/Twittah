@@ -36,6 +36,7 @@ func NewAuthEventProducer(brokers []string, topic string) (*AuthEventProducer, e
 	if err != nil {
 		return nil, err
 	}
+	common.Logger().Debug("AuthEventProducer created", "topic ", topic)
 	return &AuthEventProducer{producer: producer, registerTopic: topic}, nil
 }
 
@@ -64,5 +65,6 @@ func (p *AuthEventProducer) PublishUserCreateRequest(ctx context.Context, userna
 	if err != nil {
 		common.Logger().Errorw("Failed to send user create request to Kafka", "error", err)
 	}
+	common.Logger().Debug("User create request sent to Kafka", "username", username)
 	return err
 }
