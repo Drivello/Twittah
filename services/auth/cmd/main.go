@@ -9,27 +9,32 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 
 	"github.com/Drivello/Twittah/services/auth/config"
 	"github.com/Drivello/Twittah/services/auth/ent"
 	authhttp "github.com/Drivello/Twittah/services/auth/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/postgres"
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/usecase"
 	"github.com/gin-gonic/gin"
-	"github.com/Drivello/Twittah/services/auth/internal/common"
-	"go.uber.org/zap"
 )
 
 // main is the entry point for the AuthService. It sets up logging, configuration, database, Kafka, and the HTTP server.
 // Implements graceful shutdown for HTTP server and resources.
 func main() {
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	common.InitLogger(logLevel)
 	logger := common.Logger()
-defer logger.Sync()
+	defer logger.Sync()
 
 	cfg := config.LoadConfig()
 
-	producer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, "user_created")
+	producer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaUserEventsTopic)
 	if err != nil {
 		logger.Fatal("Failed to create Kafka producer", zap.Error(err))
 	}
@@ -40,23 +45,16 @@ defer logger.Sync()
 	}
 
 	repo := postgres.NewPostgresUserRepository(entClient)
-	userUC := usecase.NewUserUseCasePort(repo)
+	userUC := usecase.NewUserUseCasePort(repo, producer, cfg.UserCreatedEventType)
 
-	userConsumer := &kafka.UserCreateConsumer{
-		UserUC:   userUC,
-		Producer: producer.Producer,
-		Config:   cfg.Retry,
-	}
-	dlqWorker := &kafka.DLQWorker{
-		Repo:     repo,
-		Producer: producer.Producer,
-		Config:   cfg.DLQWorker,
-	}
-	kafka.StartKafkaConsumers(cfg, userConsumer, dlqWorker)
+	kafka.StartKafkaConsumers(cfg, repo, userUC, producer.Producer)
 
 	r := gin.Default()
-	handler := authhttp.NewAuthHandler()
+	handler := authhttp.NewAuthHandler(userUC)
+	healthHandler := authhttp.NewHealthHandler(cfg, entClient)
+
 	handler.RegisterRoutes(r)
+	healthHandler.RegisterRoutes(r)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
@@ -85,7 +83,7 @@ defer logger.Sync()
 	if err := entClient.Close(); err != nil {
 		logger.Error("Error closing database connection", zap.Error(err))
 	}
-	// TODO: Add Kafka producer/consumer shutdown if needed
+	kafka.CloseKafka(producer.Producer)
 
 	logger.Info("AuthService exited cleanly")
 }

@@ -12,7 +12,7 @@ $$;
 \connect user
 
 -- 02-create-user-table.sql
-CREATE TABLE IF NOT EXISTS "user" (
+CREATE TABLE IF NOT EXISTS "users" (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
@@ -22,11 +22,11 @@ CREATE TABLE IF NOT EXISTS "user" (
 );
 
 -- 03-create-follow-table.sql
-CREATE TABLE IF NOT EXISTS "follow" (
+CREATE TABLE IF NOT EXISTS "follows" (
     id SERIAL PRIMARY KEY,
     follower_id INT NOT NULL,
     followee_id INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_follower FOREIGN KEY (follower_id) REFERENCES "user"(id),
-    CONSTRAINT fk_followee FOREIGN KEY (followee_id) REFERENCES "user"(id)
+    CONSTRAINT fk_follower FOREIGN KEY (follower_id) REFERENCES "users"(id),
+    CONSTRAINT fk_followee FOREIGN KEY (followee_id) REFERENCES "users"(id)
 );

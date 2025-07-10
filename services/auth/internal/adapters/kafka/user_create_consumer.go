@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Drivello/Twittah/services/auth/config"
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"github.com/IBM/sarama"
@@ -21,43 +22,32 @@ type UserCreateRequest struct {
 }
 
 // UserCreateConsumer handles Kafka messages for user creation events.
-
 type UserCreateConsumer struct {
-	UserUC   ports.UserUseCasePort
-	Producer sarama.SyncProducer
-	Config   config.RetryConfig
+	UserUC    ports.UserUseCasePort
+	Producer  sarama.SyncProducer
+	Config    config.RetryConfig
+	EventType string
 }
 
 func (c *UserCreateConsumer) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
 func (c *UserCreateConsumer) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 
 // ConsumeClaim processes messages from the Kafka topic and attempts to create users.
-// On failure after retries, the message is sent to the DLQ.
+// On failure after retries, the message is sent to the DLQ (if enabled).
 func (c *UserCreateConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	zap.L().Info("[KafkaConsumer] ConsumeClaim started for user_created topic")
-	for msg := range claim.Messages() {
-		// Process each message in the Kafka topic
-		var req UserCreateRequest
-		if err := json.Unmarshal(msg.Value, &req); err != nil {
-			zap.L().Error("[KafkaConsumer] Failed to unmarshal user create request", zap.Error(err))
-			sess.MarkMessage(msg, "")
-			continue // Skip invalid message
-		}
+	topic := claim.Topic()
+	common.Logger().Debug("[KafkaConsumer] [UserCreateConsumer] Listening topic", zap.String("topic", topic))
 
-		ctx, cancel := context.WithTimeout(sess.Context(), c.Config.MaxRetryDuration)
-		defer cancel()
+	workerCount := 8 // puedes parametrizar esto con config
+	queueSize := 64
+	wq := NewWorkQueue(workerCount, queueSize)
 
-		event := struct {
-			Username string `json:"username"`
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}{
-			Username: req.Username,
-			Email:    req.Email,
-			Password: req.Password,
-		}
+	// Función que ejecuta el registro y DLQ (corre en cada worker)
+	process := func(item WorkItem) {
+		req := item.Request
+		ctx := item.Ctx
+		msg, _ := item.Msg.(sarama.ConsumerMessage)
 
-			// Attempt user creation with retry and backoff
 		err := retryWithTimeoutAndJitter(ctx, c.Config, func() error {
 			user := &domain.User{
 				Username: req.Username,
@@ -65,22 +55,57 @@ func (c *UserCreateConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, clai
 				Password: req.Password,
 			}
 			_, err := c.UserUC.RegisterUser(ctx, user)
+			common.Logger().Debug("[KafkaConsumer] RegisterUser error", zap.Error(err))
 			return err
 		})
 
 		if err != nil {
-			// If all retries fail, send to DLQ
-			zap.L().Error("[KafkaConsumer] Failed to create user after retries, sending to DLQ", zap.Error(err), zap.String("dlq_topic", c.Config.DLQTopic))
+			common.Logger().Error("[KafkaConsumer] Failed to create user after retries, would send to DLQ",
+				zap.Error(err),
+				zap.String("dlq_topic", c.Config.DLQTopic))
+
+			event := buildEventWithType(req, c.EventType)
 			dlqErr := sendToDLQ(c.Producer, c.Config.DLQTopic, event)
 			if dlqErr != nil {
-				zap.L().Error("[KafkaConsumer] Failed to send message to DLQ", zap.Error(dlqErr))
+				common.Logger().Error("[KafkaConsumer] Failed to send message to DLQ", zap.Error(dlqErr))
 			}
+
+		}
+
+		// Marcar mensaje como procesado (éxito o DLQ)
+		sess.MarkMessage(&msg, "")
+	}
+
+	// Start WorkQueue with retry duration
+	wq.Start(process, c.Config.MaxRetryDuration)
+	defer wq.Stop()
+
+	for msg := range claim.Messages() {
+		var req UserCreateRequest
+		if err := json.Unmarshal(msg.Value, &req); err != nil {
+			common.Logger().Error("[KafkaConsumer] Failed to unmarshal user create request", zap.Error(err))
 			sess.MarkMessage(msg, "")
 			continue
 		}
 
-		// Successfully processed message
-		sess.MarkMessage(msg, "")
+		// Submit WorkItem with a simple background context (timeout is in worker)
+		err := wq.Submit(WorkItem{
+			Ctx:     context.Background(),
+			Request: req,
+			Msg:     *msg,
+		})
+		if err != nil {
+			common.Logger().Warn("[KafkaConsumer] WorkQueue full, would send to DLQ", zap.Error(err))
+
+			event := buildEventWithType(req, c.EventType)
+			dlqErr := sendToDLQ(c.Producer, c.Config.DLQTopic, event)
+			if dlqErr != nil {
+				common.Logger().Error("Failed to send message to DLQ (queue full)", zap.Error(dlqErr))
+			}
+
+			common.Logger().Error("[KafkaConsumer] Dropping message because WorkQueue is full and DLQ is disabled")
+			sess.MarkMessage(msg, "")
+		}
 	}
 	return nil
 }
@@ -88,7 +113,6 @@ func (c *UserCreateConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, clai
 // retryWithTimeoutAndJitter retries a function using exponential backoff and jitter until timeout.
 func retryWithTimeoutAndJitter(ctx context.Context, cfg config.RetryConfig, fn func() error) error {
 	backoff := cfg.InitialBackoff
-	rand.Seed(time.Now().UnixNano()) // for jitter
 
 	for {
 		select {
@@ -100,7 +124,9 @@ func retryWithTimeoutAndJitter(ctx context.Context, cfg config.RetryConfig, fn f
 				return nil // success
 			}
 
-			zap.L().Warn("Retryable error, will retry", zap.Error(err), zap.Duration("next_backoff", backoff))
+			common.Logger().Warn("Retryable error, will retry",
+				zap.Error(err),
+				zap.Duration("next_backoff", backoff))
 
 			// Sleep with jitter (randomize between 50% and 150% of backoff)
 			jitter := time.Duration(rand.Int63n(int64(backoff))) / 2
@@ -133,6 +159,15 @@ func sendToDLQ(producer sarama.SyncProducer, topic string, event interface{}) er
 		return fmt.Errorf("failed to send message to DLQ: %w", err)
 	}
 
-	zap.L().Info("Message sent to DLQ", zap.String("topic", topic))
+	common.Logger().Info("Message sent to DLQ", zap.String("topic", topic))
 	return nil
+}
+
+func buildEventWithType(req UserCreateRequest, eventType string) map[string]interface{} {
+	return map[string]interface{}{
+		"event_type": eventType,
+		"username":   req.Username,
+		"email":      req.Email,
+		"password":   req.Password,
+	}
 }

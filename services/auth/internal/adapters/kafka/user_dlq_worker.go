@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/Drivello/Twittah/services/auth/config"
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"github.com/IBM/sarama"
@@ -29,7 +31,7 @@ func (w *DLQWorker) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 // ConsumeClaim processes messages from the DLQ topic and retries user creation.
 // If retries fail, the message is sent to the final DLQ.
 func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	zap.L().Info("[DLQWorker] ConsumeClaim started for DLQ topic")
+	common.Logger().Info("[DLQWorker] ConsumeClaim started for DLQ topic")
 	for msg := range claim.Messages() {
 		// Process each message from the DLQ topic
 		var event struct {
@@ -38,9 +40,19 @@ func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.
 			Password string `json:"password"`
 		}
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
-			zap.L().Error("[DLQWorker] Invalid DLQ message, skipping", zap.Error(err))
+			common.Logger().Error("[DLQWorker] Invalid DLQ message, skipping", zap.Error(err))
 			sess.MarkMessage(msg, "")
 			continue // Skip invalid DLQ message
+		}
+
+		// TTL check: si el mensaje es más viejo que el TTL, descártalo
+		if w.Config.DLQMessageTTL > 0 {
+			msgAge := time.Since(msg.Timestamp)
+			if msgAge > w.Config.DLQMessageTTL {
+				common.Logger().Warn("[DLQWorker] Discarding DLQ message by TTL", zap.Duration("age", msgAge), zap.Duration("ttl", w.Config.DLQMessageTTL))
+				sess.MarkMessage(msg, "")
+				continue
+			}
 		}
 
 		ctx, cancel := context.WithTimeout(sess.Context(), w.Config.MaxRetryDuration)
@@ -59,10 +71,10 @@ func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.
 
 		if err != nil {
 			// If all retries fail, send to final DLQ
-			zap.L().Error("[DLQWorker] Failed to process DLQ message after retries, sending to final DLQ", zap.Error(err), zap.String("final_dlq", w.Config.FinalDLQTopic))
-			dlqErr := requeueToDLQ(w.Producer, w.Config.FinalDLQTopic, event)
+			common.Logger().Error("[DLQWorker] Failed to process DLQ message after retries, sending to final DLQ", zap.Error(err), zap.String("final_dlq", w.Config.SourceTopic))
+			dlqErr := requeueToDLQ(w.Producer, w.Config.SourceTopic, event)
 			if dlqErr != nil {
-				zap.L().Error("[DLQWorker] Failed to send message to final DLQ", zap.Error(dlqErr))
+				common.Logger().Error("[DLQWorker] Failed to send message to final DLQ", zap.Error(dlqErr))
 			}
 		}
 
@@ -81,12 +93,21 @@ func retryWithTimeoutAndJitterDQL(ctx context.Context, cfg config.DLQWorkerConfi
 		case <-ctx.Done():
 			return fmt.Errorf("retry timed out after %v: %w", cfg.MaxRetryDuration, ctx.Err())
 		default:
-			err := fn()
+			var err error
+			defer func() {
+				if r := recover(); r != nil {
+					common.Logger().Error("Recovered from panic in DLQWorker", zap.Any("panic", r))
+				}
+			}()
+			err = fn()
 			if err == nil {
 				return nil
 			}
-
-			zap.L().Warn("DLQ worker retryable error, will retry", zap.Error(err), zap.Duration("next_backoff", backoff))
+			if isPermanentError(err) {
+				common.Logger().Warn("Permanent error in DLQWorker, skipping retries", zap.Error(err))
+				return err
+			}
+			common.Logger().Warn("DLQ worker retryable error, will retry", zap.Error(err), zap.Duration("next_backoff", backoff))
 
 			// Sleep con jitter (aleatoriza entre 50% y 150% del backoff)
 			jitter := time.Duration(rand.Int63n(int64(backoff))) / 2
@@ -104,6 +125,18 @@ func retryWithTimeoutAndJitterDQL(ctx context.Context, cfg config.DLQWorkerConfi
 	}
 }
 
+// isPermanentError categoriza errores que no deben ser reintentados (ej: violación de unique key)
+func isPermanentError(err error) bool {
+	// Ejemplo simple: puedes mejorar esto según el driver de DB
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+		return true
+	}
+	return false
+}
+
 // requeueToDLQ serializes the event and sends it to the DLQ topic using the provided Kafka producer.
 func requeueToDLQ(producer sarama.SyncProducer, topic string, event interface{}) error {
 	payload, err := json.Marshal(event)
@@ -119,6 +152,6 @@ func requeueToDLQ(producer sarama.SyncProducer, topic string, event interface{})
 		return fmt.Errorf("failed to send message to DLQ: %w", err)
 	}
 
-	zap.L().Info("Message sent to DLQ", zap.String("topic", topic))
+	common.Logger().Info("Message sent to DLQ", zap.String("topic", topic))
 	return nil
 }

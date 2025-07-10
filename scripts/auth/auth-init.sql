@@ -12,7 +12,7 @@ $$;
 \connect auth
 
 -- 02-create-user-table.sql
-CREATE TABLE IF NOT EXISTS "user" (
+CREATE TABLE IF NOT EXISTS "users" (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,

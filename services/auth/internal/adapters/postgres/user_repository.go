@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Drivello/Twittah/services/auth/ent"
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 	"go.uber.org/zap"
 )
@@ -18,7 +19,7 @@ func NewPostgresUserRepository(client *ent.Client) *PostgresUserRepository {
 }
 
 func (r *PostgresUserRepository) CreateUser(ctx context.Context, user *domain.User) (int64, error) {
-	zap.L().Info("[Repo] Persisting user to database", zap.String("username", user.Username))
+	common.Logger().Info("[Repo] Persisting user to database", zap.String("username", user.Username))
 	createdUser, err := r.Client.User.
 		Create().
 		SetUsername(user.Username).
@@ -28,9 +29,9 @@ func (r *PostgresUserRepository) CreateUser(ctx context.Context, user *domain.Us
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
-		zap.L().Error("[Repo] Failed to persist user", zap.Error(err))
+		common.Logger().Error("[Repo] Failed to persist user", zap.Error(err))
 		return 0, err
 	}
-	zap.L().Info("[Repo] User persisted to database", zap.Int64("id", createdUser.ID))
+	common.Logger().Info("[Repo] User persisted to database", zap.Int64("id", createdUser.ID))
 	return createdUser.ID, nil
 }

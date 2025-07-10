@@ -20,7 +20,6 @@ type DLQWorkerConfig struct {
 	MaxBackoff       time.Duration
 	InitialBackoff   time.Duration
 	SourceTopic      string
-	FinalDLQTopic    string
 }
 
 func LoadDLQWorkerConfig() DLQWorkerConfig {
@@ -28,8 +27,7 @@ func LoadDLQWorkerConfig() DLQWorkerConfig {
 		MaxRetryDuration: getEnvAsDuration("DLQ_WORKER_MAX_DURATION", 1*time.Hour),
 		MaxBackoff:       getEnvAsDuration("DLQ_WORKER_MAX_BACKOFF", 5*time.Minute),
 		InitialBackoff:   getEnvAsDuration("DLQ_WORKER_INITIAL_BACKOFF", 5*time.Second),
-		SourceTopic:      getEnv("DLQ_WORKER_SOURCE_TOPIC", "user_created_dlq"),
-		FinalDLQTopic:    getEnv("DLQ_WORKER_FINAL_DLQ_TOPIC", "user_created_dlq_final"),
+		SourceTopic:      getEnv("DLQ_WORKER_SOURCE_TOPIC", "user.created.dlq"),
 	}
 }
 
@@ -70,11 +68,11 @@ func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.
 
 		if err != nil {
 			zap.S().Errorw("Failed to process DLQ message after retries, sending to final DLQ",
-				"error", err, "user_id", event.ID, "final_dlq", w.Config.FinalDLQTopic)
+				"error", err, "user_id", event.ID, "final_dlq", w.Config.SourceTopic)
 
-			dlqErr := requeueToDLQ(w.Producer, w.Config.FinalDLQTopic, event)
+			dlqErr := requeueToDLQ(w.Producer, w.Config.SourceTopic, event)
 			if dlqErr != nil {
-				zap.S().Errorw("Failed to send message to final DLQ", "error", dlqErr)
+				zap.S().Errorw("Failed to requeue", "error", dlqErr)
 			}
 		}
 
@@ -134,6 +132,6 @@ func requeueToDLQ(producer sarama.SyncProducer, topic string, event UserCreatedE
 		return fmt.Errorf("failed to send message to DLQ: %w", err)
 	}
 
-	zap.S().Infow("Message sent to DLQ", "topic", topic, "user_id", event.ID)
+	zap.S().Infow("Requeued message to DLQ", "topic", topic, "user_id", event.ID)
 	return nil
 }

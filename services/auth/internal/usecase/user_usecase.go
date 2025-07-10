@@ -10,11 +10,13 @@ import (
 )
 
 type userUseCase struct {
-	repo ports.UserRepository
+	repo                 ports.UserRepository
+	producer             ports.UserEventProducerPort
+	userCreatedEventType string
 }
 
-func NewUserUseCasePort(repo ports.UserRepository) ports.UserUseCasePort {
-	return &userUseCase{repo: repo}
+func NewUserUseCasePort(repo ports.UserRepository, producer ports.UserEventProducerPort, eventString string) ports.UserUseCasePort {
+	return &userUseCase{repo: repo, producer: producer, userCreatedEventType: eventString}
 }
 
 func (uc *userUseCase) RegisterUser(ctx context.Context, user *domain.User) (int64, error) {
@@ -32,6 +34,17 @@ func (uc *userUseCase) RegisterUser(ctx context.Context, user *domain.User) (int
 		return 0, err
 	}
 	zap.L().Info("[UseCase] User successfully persisted", zap.Int64("id", userID))
+
+	// Publicar evento solo si el usuario fue creado exitosamente
+	if uc.producer != nil {
+		err := uc.producer.PublishUserCreated(userID, user.Username, uc.userCreatedEventType)
+		if err != nil {
+			zap.L().Error("[UseCase] Failed to publish user created event", zap.Error(err))
+		} else {
+			zap.L().Debug("[UseCase] Published user created event", zap.Int64("id", userID))
+		}
+	}
+
 	return userID, nil
 }
 

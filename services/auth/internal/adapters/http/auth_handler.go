@@ -1,17 +1,18 @@
 package http
 
 import (
+	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler handles HTTP requests for authentication-related endpoints.
 type AuthHandler struct {
+	UserUC ports.UserUseCasePort
 }
 
-// NewAuthHandler creates a new AuthHandler instance.
-// Returns a pointer to AuthHandler.
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+// NewAuthHandler creates a new AuthHandler instance con inyección de usecase.
+func NewAuthHandler(userUC ports.UserUseCasePort) *AuthHandler {
+	return &AuthHandler{UserUC: userUC}
 }
 
 // RegisterRoutes registers authentication-related routes with the given Gin engine.

@@ -28,7 +28,7 @@ func LoadRetryConfig() RetryConfig {
 		MaxRetryDuration: getEnvAsDuration("RETRY_MAX_DURATION", 2*time.Hour),
 		MaxBackoff:       getEnvAsDuration("RETRY_MAX_BACKOFF", 30*time.Second),
 		InitialBackoff:   getEnvAsDuration("RETRY_INITIAL_BACKOFF", 500*time.Millisecond),
-		DLQTopic:         getEnv("RETRY_DLQ_TOPIC", "user_created_dlq"),
+		DLQTopic:         getEnv("RETRY_DLQ_TOPIC", "user.created.dlq"),
 	}
 }
 

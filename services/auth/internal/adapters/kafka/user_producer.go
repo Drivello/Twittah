@@ -3,6 +3,7 @@ package kafka
 import (
 	"encoding/json"
 
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
 )
@@ -26,24 +27,24 @@ func NewUserEventProducer(brokers []string, topic string) (*UserEventProducer, e
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
-		zap.L().Error("[KafkaProducer] Failed to create SyncProducer", zap.Error(err))
+		common.Logger().Error("[KafkaProducer] Failed to create SyncProducer", zap.Error(err))
 		return nil, err
 	}
-	zap.L().Info("[KafkaProducer] SyncProducer created successfully", zap.Strings("brokers", brokers), zap.String("topic", topic))
+	common.Logger().Info("[KafkaProducer] SyncProducer created successfully", zap.Strings("brokers", brokers), zap.String("topic", topic))
 	return &UserEventProducer{Producer: producer, Topic: topic}, nil
 }
 
-// PublishUserCreated publishes a user_created event to Kafka.
-func (p *UserEventProducer) PublishUserCreated(id int64, username string) error {
-	zap.L().Info("[Kafka] Publishing user_created event", zap.Int64("id", id), zap.String("username", username))
+// PublishUserCreated publishes a users.create.to.replicate event to Kafka.
+func (p *UserEventProducer) PublishUserCreated(id int64, username string, eventType string) error {
+	common.Logger().Debug("[Kafka] Publishing users.create.to.replicate event", zap.Int64("id", id), zap.String("username", username), zap.String("event_type", eventType))
 	event := UserCreatedEvent{
-		EventType: "user_created",
+		EventType: eventType,
 		ID:        id,
 		Username:  username,
 	}
 	value, err := json.Marshal(event)
 	if err != nil {
-		zap.L().Error("[Kafka] Failed to marshal user_created event", zap.Error(err))
+		common.Logger().Error("[Kafka] Failed to marshal users.create.to.replicate event", zap.Error(err))
 		return err
 	}
 	msg := &sarama.ProducerMessage{
@@ -52,9 +53,9 @@ func (p *UserEventProducer) PublishUserCreated(id int64, username string) error 
 	}
 	partition, offset, err := p.Producer.SendMessage(msg)
 	if err != nil {
-		zap.L().Error("[Kafka] Failed to publish user_created event", zap.Error(err))
+		common.Logger().Error("[Kafka] Failed to publish users.create.to.replicate event", zap.Error(err))
 		return err
 	}
-	zap.L().Info("[Kafka] user_created event published", zap.Int64("id", id), zap.String("username", username), zap.Int32("partition", partition), zap.Int64("offset", offset))
+	common.Logger().Debug("[Kafka] users.create.to.replicate event published", zap.Int64("id", id), zap.String("username", username), zap.Int32("partition", partition), zap.Int64("offset", offset))
 	return nil
 }
