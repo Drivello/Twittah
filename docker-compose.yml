@@ -5,43 +5,60 @@ services:
     image: bitnami/kafka:3.7
     ports:
       - "9092:9092"
-      - "29092:29092"
     environment:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
-      - KAFKA_CFG_LOG_DIRS=/bitnami/kafka/data
-    volumes:
-      - ./scripts/init-topics.sh:/init-topics.sh:ro
-    command: ["sh", "-c", "sleep 10 && bash /init-topics.sh && /opt/bitnami/scripts/kafka/entrypoint.sh /run.sh"]
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_KRAFT_CLUSTER_ID=twittah-cluster-id
+      - KAFKA_CREATE_TOPICS=users.events,follows.events,tweets.events,timelines.updated
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_FOLLOWS_TOPIC=follows.events
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TIMELINE_TOPIC=timelines.updated
+      - KAFKA_GROUP_ID=twittah-group
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      test:
+        [
+          "CMD",
+          "/opt/bitnami/kafka/bin/kafka-topics.sh",
+          "--bootstrap-server",
+          "kafka:9092",
+          "--list",
+        ]
       interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 20s
+      retries: 10
 
+  kafka-init:
+    image: bitnami/kafka:3.7
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c", "/init-topics.sh"]
+    volumes:
+      - ./scripts/init-topics.sh:/init-topics.sh:ro
+      - kafka-data:/bitnami/kafka
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - REPLICATION_FACTOR=1
+      - PARTITIONS=1
 
   postgres-auth:
-    image: postgres:15-alpine
-    restart: always
+    image: postgres:15
     environment:
-      POSTGRES_USER: auth
-      POSTGRES_PASSWORD: auth
-      POSTGRES_DB: auth
+      - POSTGRES_USER=auth
+      - POSTGRES_PASSWORD=auth
+      - POSTGRES_DB=auth
     ports:
-      - "5433:5432"
+      - "5435:5432"
     volumes:
-      - pgdata-auth:/var/lib/postgresql/data
-      - ./scripts/auth:/docker-entrypoint-initdb.d
+    - pgdata-auth:/var/lib/postgresql/data
+    - ./scripts/auth/auth-init.sql:/docker-entrypoint-initdb.d/auth-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U auth"]
       interval: 5s
@@ -49,87 +66,33 @@ services:
       retries: 5
 
   postgres-user:
-    image: postgres:15-alpine
-    restart: always
+    image: postgres:15
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: user
-      POSTGRES_DB: user
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=user
+      - POSTGRES_DB=user
     ports:
       - "5434:5432"
     volumes:
       - pgdata-user:/var/lib/postgresql/data
-      - ./scripts/user:/docker-entrypoint-initdb.d
+      - ./scripts/user/user-init.sql:/docker-entrypoint-initdb.d/user-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  gateway:
-    build:
-      context: ./services/gateway
-    environment:
-      KAFKA_BROKERS: "kafka:9092"
-      GATEWAY_PORT: 8081
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8081:8081"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  auth:
-    build:
-      context: ./services/auth
-    environment:
-      POSTGRES_DSN: "host=postgres-auth user=auth password=auth dbname=auth sslmode=disable"
-      KAFKA_BROKERS: "kafka:9092"
-      AUTH_SERVICE_PORT: 8082
-    depends_on:
-      postgres-auth:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8082:8082"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  user:
-    build:
-      context: ./services/user
-    environment:
-      POSTGRES_DSN: "host=postgres-user user=user password=user dbname=user sslmode=disable"
-      KAFKA_BROKERS: "kafka:9092"
-      USER_SERVICE_PORT: 8083
-    depends_on:
-      postgres-user:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8083:8083"
-
   postgres-tweet:
-    image: postgres:15-alpine
-    restart: always
+    image: postgres:15
     environment:
-      POSTGRES_USER: tweet
-      POSTGRES_PASSWORD: tweet
-      POSTGRES_DB: tweet
+      - POSTGRES_USER=tweet
+      - POSTGRES_PASSWORD=tweet
+      - POSTGRES_DB=tweet
     ports:
-      - "5435:5432"
+      - "5433:5432"
     volumes:
       - pgdata-tweet:/var/lib/postgresql/data
-      - ./scripts/tweet:/docker-entrypoint-initdb.d
+      - ./scripts/tweet/tweet-init.sql:/docker-entrypoint-initdb.d/tweet-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tweet"]
       interval: 5s
@@ -137,10 +100,9 @@ services:
       retries: 5
 
   redis-tweet:
-    image: redis:7-alpine
-    restart: always
+    image: redis:7
     ports:
-      - "6380:6379"
+      - "6379:6379"
     volumes:
       - redisdata-tweet:/data
     healthcheck:
@@ -149,18 +111,105 @@ services:
       timeout: 5s
       retries: 5
 
+  gateway:
+    build:
+      context: ./services/gateway
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - GATEWAY_PORT=8081
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_FOLLOWS_TOPIC=follows.events
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TIMELINE_TOPIC=timelines.updated
+      - LOG_LEVEL=debug
+      - USER_MICROSERVICE_URL=http://user:8083
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      user:
+        condition: service_started
+      tweet:
+        condition: service_started
+    ports:
+      - "8081:8081"
+
+  auth:
+    build:
+      context: ./services/auth
+    environment:
+      - AUTH_POSTGRES_DSN=postgres://auth:auth@postgres-auth:5432/auth?sslmode=disable
+      - KAFKA_BROKERS=kafka:9092
+      - AUTH_PORT=8082
+      - RETRY_MAX_DURATION=2h
+      - RETRY_MAX_BACKOFF=30s
+      - RETRY_INITIAL_BACKOFF=500ms
+      - RETRY_DLQ_TOPIC=auth_created_dlq
+      - DLQ_WORKER_SOURCE_TOPIC=auth_created_dlq
+      - DLQ_WORKER_FINAL_DLQ_TOPIC=auth_created_dlq_final
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8082:8082"
+
+  user:
+    build:
+      context: ./services/user
+    environment:
+      - USER_POSTGRES_DSN=postgres://user:user@postgres-user:5432/user?sslmode=disable
+      - REDIS_ADDR=redis-tweet:6379
+      - KAFKA_BROKERS=kafka:9092
+      - USER_SERVICE_PORT=8083
+      - USER_KAFKA_GROUP_ID=user-service-group
+      - RETRY_DLQ_TOPIC=user_created_dlq
+      - DLQ_WORKER_SOURCE_TOPIC=user_created_dlq
+      - DLQ_WORKER_FINAL_DLQ_TOPIC=user_created_dlq_final
+      - USER_RETRY_MAX_DURATION=2h
+      - USER_RETRY_MAX_BACKOFF=30s
+      - USER_RETRY_INITIAL_BACKOFF=500ms
+      - USER_DLQ_WORKER_MAX_DURATION=1h
+      - USER_DLQ_WORKER_MAX_BACKOFF=5m
+      - USER_DLQ_WORKER_INITIAL_BACKOFF=5s
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis-tweet:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8083:8083"
+
   tweet:
     build:
       context: ./services/tweet
-    env_file:
-      - ./services/tweet/.env-example
     environment:
-      POSTGRES_DSN: "host=postgres-tweet user=tweet password=tweet dbname=tweet sslmode=disable"
-      REDIS_ADDR: "redis-tweet:6379"
-      KAFKA_BROKERS: "kafka:9092"
-      KAFKA_GROUP_ID: "tweet-service-group"
-      SERVICE_PORT: 8084
-      TIMELINE_TTL_HOURS: 24
+      - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
+      - REDIS_ADDR=redis-tweet:6379
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_GROUP_ID=tweet-service-group
+      - SERVICE_PORT=8084
+      - TIMELINE_TTL_HOURS=24
+      - RETRY_MAX_DURATION=2h
+      - RETRY_MAX_BACKOFF=30s
+      - RETRY_INITIAL_BACKOFF=500ms
+      - RETRY_DLQ_TOPIC=tweets.dlq
+      - DLQ_WORKER_MAX_DURATION=1h
+      - DLQ_WORKER_MAX_BACKOFF=5m
+      - DLQ_WORKER_INITIAL_BACKOFF=5s
+      - DLQ_WORKER_SOURCE_TOPIC=tweets.dlq
+      - DLQ_WORKER_FINAL_DLQ_TOPIC=tweets.dlq.final
+      - LOG_LEVEL=debug
     depends_on:
       postgres-tweet:
         condition: service_healthy
@@ -168,6 +217,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
     ports:
       - "8084:8084"
 
@@ -176,3 +227,4 @@ volumes:
   pgdata-user:
   pgdata-tweet:
   redisdata-tweet:
+  kafka-data:

@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	"github.com/Drivello/Twittah/services/auth/config"
 	"github.com/Drivello/Twittah/services/auth/ent"
 	authhttp "github.com/Drivello/Twittah/services/auth/internal/adapters/http"

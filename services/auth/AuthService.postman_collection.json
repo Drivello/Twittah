@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "auth-service-collection-2025-07-09",
+    "name": "AuthService",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8082/auth/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8082",
+          "path": ["auth", "health"]
+        }
+      }
+    },
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8082/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8082",
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Validate Auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8082/auth/validate",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8082",
+          "path": ["auth", "validate"]
+        }
+      }
+    },
+    {
+      "name": "Deactivate User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8082/auth/deactivate",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8082",
+          "path": ["auth", "deactivate"]
+        }
+      }
+    }
+  ]
+}

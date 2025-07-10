@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	"github.com/Drivello/Twittah/services/tweet/config"
 	"github.com/Drivello/Twittah/services/tweet/ent"
 	tweethttp "github.com/Drivello/Twittah/services/tweet/internal/adapters/http"

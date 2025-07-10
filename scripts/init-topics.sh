@@ -8,7 +8,7 @@ PARTITIONS=${PARTITIONS:-1}
 
 create_topic() {
   local topic=$1
-  kafka-topics \
+  /opt/bitnami/kafka/bin/kafka-topics.sh \
     --bootstrap-server "$KAFKA_BROKER" \
     --create \
     --if-not-exists \
@@ -17,9 +17,9 @@ create_topic() {
     --partitions "$PARTITIONS"
 }
 
-create_topic tweets.published
-create_topic follows.created
-create_topic follows.deleted
+create_topic users.events
+create_topic follows.events
+create_topic tweets.events
 create_topic timelines.updated
 
 echo "Kafka topics initialized."

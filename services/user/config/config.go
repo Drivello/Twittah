@@ -46,9 +46,9 @@ func ParseKafkaBrokers(brokers []string) []string {
 // LoadConfig loads configuration from environment variables or .env file.
 // LoadConfig loads configuration from environment variables. Returns a pointer to Config and error if any variable is missing.
 func LoadConfig() (*Config, error) {
-	postgresDSN := os.Getenv("POSTGRES_DSN")
+	postgresDSN := os.Getenv("USER_POSTGRES_DSN")
 	if postgresDSN == "" {
-		return nil, fmt.Errorf("POSTGRES_DSN env var required")
+		return nil, fmt.Errorf("USER_POSTGRES_DSN env var required")
 	}
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {

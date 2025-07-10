@@ -50,7 +50,7 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 func LoadConfig() *Config {
 	port := os.Getenv("AUTH_PORT")
 	brokers := os.Getenv("KAFKA_BROKERS")
-	databaseURL := os.Getenv("DATABASE_URL")
+	databaseURL := os.Getenv("AUTH_POSTGRES_DSN")
 
 	if port == "" {
 		zap.L().Fatal("AUTH_PORT env var required")
@@ -59,7 +59,7 @@ func LoadConfig() *Config {
 		zap.L().Fatal("KAFKA_BROKERS env var required")
 	}
 	if databaseURL == "" {
-		zap.L().Fatal("DATABASE_URL env var required")
+		zap.L().Fatal("AUTH_POSTGRES_DSN env var required")
 	}
 
 	retryCfg := RetryConfig{

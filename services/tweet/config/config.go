@@ -24,7 +24,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("SERVICE_PORT", "8080")
 	viper.SetDefault("TIMELINE_TTL_HOURS", 24)
 
-	required := []string{"POSTGRES_DSN", "REDIS_ADDR", "KAFKA_BROKERS", "KAFKA_GROUP_ID"}
+	required := []string{"TWEET_POSTGRES_DSN", "REDIS_ADDR", "KAFKA_BROKERS", "KAFKA_GROUP_ID"}
 	for _, key := range required {
 		if viper.GetString(key) == "" {
 			return nil, fmt.Errorf("missing required env var: %s", key)
@@ -32,7 +32,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		PostgresDSN:      viper.GetString("POSTGRES_DSN"),
+		PostgresDSN:      viper.GetString("TWEET_POSTGRES_DSN"),
 		RedisAddr:        viper.GetString("REDIS_ADDR"),
 		KafkaBrokers:     viper.GetStringSlice("KAFKA_BROKERS"),
 		KafkaGroupID:     viper.GetString("KAFKA_GROUP_ID"),
