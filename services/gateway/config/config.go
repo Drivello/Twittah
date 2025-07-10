@@ -13,7 +13,7 @@ import (
 type GatewayConfig struct {
 	Port                string
 	KafkaBrokers        []string
-	KafkaUserTopic      string
+	KafkaAuthTopic      string
 	KafkaFollowTopic    string
 	KafkaTweetTopic     string
 	LogLevel            string
@@ -37,9 +37,9 @@ func LoadConfig() (*GatewayConfig, error) {
 	if followTopic == "" {
 		return nil, fmt.Errorf("KAFKA_FOLLOWS_TOPIC env var required")
 	}
-	userTopic := os.Getenv("KAFKA_USER_TOPIC")
-	if userTopic == "" {
-		return nil, fmt.Errorf("KAFKA_USER_TOPIC env var required")
+	authTopic := os.Getenv("KAFKA_AUTH_TOPIC")
+	if authTopic == "" {
+		return nil, fmt.Errorf("KAFKA_AUTH_TOPIC env var required")
 	}
 	tweetTopic := os.Getenv("KAFKA_TWEET_TOPIC")
 	if tweetTopic == "" {
@@ -57,7 +57,7 @@ func LoadConfig() (*GatewayConfig, error) {
 	return &GatewayConfig{
 		Port:                port,
 		KafkaBrokers:        brokers,
-		KafkaUserTopic:      userTopic,
+		KafkaAuthTopic:      authTopic,
 		KafkaFollowTopic:    followTopic,
 		KafkaTweetTopic:     tweetTopic,
 		LogLevel:            logLevel,
@@ -65,8 +65,8 @@ func LoadConfig() (*GatewayConfig, error) {
 	}, nil
 }
 
-func InitKafkaProducers(cfg *GatewayConfig) (*kafka.AuthEventProducer, *kafka.UserEventProducer, *kafka.TweetEventProducer, error) {
-	authProducer, err := kafka.NewAuthEventProducer(cfg.KafkaBrokers, cfg.KafkaUserTopic)
+func InitKafkaProducers(cfg *GatewayConfig) (*kafka.AuthProducer, *kafka.UserEventProducer, *kafka.TweetEventProducer, error) {
+	authProducer, err := kafka.NewAuthProducer(cfg.KafkaBrokers, cfg.KafkaAuthTopic)
 	if err != nil {
 		common.Logger().Errorw("Failed to create auth kafka producer", "error", err)
 		return nil, nil, nil, err
