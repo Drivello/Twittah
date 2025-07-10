@@ -4,19 +4,31 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Drivello/Twittah/services/gateway/config"
 	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type HealthHandler struct {
+	cfg   *config.GatewayConfig
 	Kafka sarama.Client
+}
+
+func NewHealthHandler(cfg *config.GatewayConfig) *HealthHandler {
+	// Inicializa el health handler con el cliente de Kafka
+	kafkaClient, err := sarama.NewClient(cfg.KafkaBrokers, nil)
+	if err != nil {
+		zap.S().Fatal("failed to create kafka client for health handler", zap.Error(err))
+	}
+	return &HealthHandler{cfg: cfg, Kafka: kafkaClient}
 }
 
 func (h *HealthHandler) Health(c *gin.Context) {
 	status := map[string]string{}
 	ok := true
 
-	requiredTopics := []string{"tweets.published", "follows.created", "follows.deleted", "timelines.updated"}
+	requiredTopics := []string{h.cfg.KafkaUserTopic, h.cfg.KafkaFollowTopic, h.cfg.KafkaTweetTopic}
 	if h.Kafka != nil {
 		topics, err := h.Kafka.Topics()
 		topicsMap := map[string]bool{}

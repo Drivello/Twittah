@@ -1,18 +1,29 @@
 package usecase
 
-import "github.com/Drivello/Twittah/services/gateway/internal/ports"
+import (
+	"context"
+	"github.com/Drivello/Twittah/services/gateway/internal/ports"
+)
 
-// UserUseCase provides the application logic for user-related operations.
+// UserUseCase implementa la lógica de usuario y cumple con el puerto hexagonal UserUseCasePort
+
 type UserUseCase struct {
 	Producer ports.UserEventProducerPort
 }
 
-// NewUserUseCase creates a new UserUseCase.
+var _ ports.UserUseCasePort = (*UserUseCase)(nil)
+
+// NewUserUseCase crea un nuevo UserUseCase.
 func NewUserUseCase(producer ports.UserEventProducerPort) *UserUseCase {
 	return &UserUseCase{Producer: producer}
 }
 
-// RegisterUser handles user registration logic.
-func (uc *UserUseCase) RegisterUser(username, email, password string) error {
-	return uc.Producer.PublishUserCreateRequest(username, email, password)
+// FollowUser handles follow logic.
+func (uc *UserUseCase) FollowUser(ctx context.Context, followerID, followeeID string) error {
+	return uc.Producer.PublishFollow(ctx, followerID, followeeID)
+}
+
+// UnfollowUser handles unfollow logic.
+func (uc *UserUseCase) UnfollowUser(ctx context.Context, followerID, followeeID string) error {
+	return uc.Producer.PublishUnfollow(ctx, followerID, followeeID)
 }

@@ -1,23 +1,36 @@
 package common
 
 import (
-	"go.uber.org/zap"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 var (
-	logger *zap.Logger
-	once   sync.Once
+	logger   *zap.Logger
+	once     sync.Once
+	logLevel string = "info"
 )
 
-// Logger returns a singleton zap.Logger instance
-func Logger() *zap.Logger {
+// InitLogger sets the log level and resets the logger singleton
+func InitLogger(level string) {
+	logLevel = level
+	logger = nil
+	once = sync.Once{} // reset singleton
+}
+
+// Logger returns a singleton zap.Logger instance with the configured level
+func Logger() *zap.SugaredLogger {
 	once.Do(func() {
-		l, err := zap.NewProduction()
+		cfg := zap.NewProductionConfig()
+		if err := cfg.Level.UnmarshalText([]byte(logLevel)); err != nil {
+			cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		}
+		l, err := cfg.Build()
 		if err != nil {
 			panic(err)
 		}
 		logger = l
 	})
-	return logger
+	return logger.Sugar()
 }

@@ -9,14 +9,12 @@ import (
 	"time"
 
 	gwhttp "github.com/Drivello/Twittah/services/gateway/internal/adapters/http"
-	gwkafka "github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
+	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
-	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"go.uber.org/zap"
 
 	"github.com/Drivello/Twittah/services/gateway/config"
-	"github.com/IBM/sarama"
 )
 
 // main is the entry point for the Gateway Service.
@@ -27,48 +25,48 @@ func main() {
 	if err != nil {
 		common.Logger().Fatal("failed to load config", zap.Error(err))
 	}
-	logger := common.Logger()
-	defer logger.Sync()
+	common.InitLogger(cfg.LogLevel)
+	defer common.Logger().Sync()
 
-	followProducer, userProducer, err := config.InitKafkaProducers(cfg)
+	authProducer, userProducer, tweetProducer, err := config.InitKafkaProducers(cfg)
 	if err != nil {
-		logger.Fatal("failed to create kafka producers", zap.Error(err))
+		common.Logger().Fatal("failed to create kafka producers", zap.Error(err))
 	}
 
-	// Inicializa el SyncProducer de Kafka para tweets
-	tweetSyncProducer, err := sarama.NewSyncProducer(cfg.KafkaBrokers, nil)
-	if err != nil {
-		logger.Fatal("failed to create tweet kafka producer", zap.Error(err))
-	}
-	tweetProducer := gwkafka.NewTweetProducer(tweetSyncProducer, "tweets.published")
+	userQueryClient := gwhttp.NewUserQueryClient(cfg.UserMicroserviceURL)
+	userQueryUseCase := usecase.NewUserQueryUseCase(userQueryClient)
+	userQueryHandler := gwhttp.NewUserQueryHandler(userQueryUseCase)
+
+	authUseCase := usecase.NewAuthUseCase(authProducer)
+	userUseCase := usecase.NewUserUseCase(userProducer)
 	tweetUsecase := usecase.NewTweetUsecase(tweetProducer)
 
-	r := gin.Default()
-	userUseCase := usecase.NewUserUseCase(userProducer)
-	authHandler := gwhttp.NewAuthHandler(userUseCase)
+	authHandler := gwhttp.NewAuthHandler(authUseCase)
+	userHandler := gwhttp.NewUserHandler(userUseCase)
 	tweetHandler := gwhttp.NewTweetHandler(tweetUsecase)
-	followUseCase := usecase.NewFollowUseCase(followProducer)
-	followHandler := gwhttp.NewFollowHandler(followUseCase)
+
+	r := gin.Default()
+	userQueryHandler.RegisterRoutes(r.Group("/api"))
 
 	authGroup := r.Group("/auth")
 	tweetGroup := r.Group("/tweets")
-	followGroup := r.Group("") // root for follow endpoints
+	userGroup := r.Group("/users")
 	authHandler.RegisterRoutes(authGroup)
 	tweetHandler.RegisterRoutes(tweetGroup)
-	followHandler.RegisterRoutes(followGroup)
-authHandler.RegisterRoutes(authGroup)
-tweetHandler.RegisterRoutes(tweetGroup)
-followHandler.RegisterRoutes(followGroup)
+	userHandler.RegisterRoutes(userGroup)
+
+	r.GET("/health", gwhttp.NewHealthHandler(cfg).Health)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
+
 	// Start HTTP server in goroutine
 	go func() {
-		logger.Info("GatewayService corriendo", zap.String("port", cfg.Port))
+		common.Logger().Info("GatewayService corriendo", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("No se pudo iniciar el Gateway", zap.Error(err))
+			common.Logger().Fatal("No se pudo iniciar el Gateway", zap.Error(err))
 		}
 	}()
 
@@ -76,13 +74,12 @@ followHandler.RegisterRoutes(followGroup)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	zap.S().Info("GatewayService: shutting down...")
+	common.Logger().Info("GatewayService: shutting down...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("GatewayService forced to shutdown", zap.Error(err))
+		common.Logger().Error("GatewayService forced to shutdown", zap.Error(err))
 	}
-	logger.Info("GatewayService exited cleanly")
+	common.Logger().Info("GatewayService exited cleanly")
 }
-

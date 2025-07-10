@@ -2,15 +2,28 @@ package usecase
 
 import (
 	"context"
-	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
+
+	"github.com/Drivello/Twittah/services/gateway/internal/domain"
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 )
 
-type TweetUsecase struct {
-	Publisher ports.TweetPublisherPort
+// TweetUseCase implementa la lógica de tweets y cumple con el puerto hexagonal TweetUseCasePort
+
+type TweetUseCase struct {
+	Producer ports.TweetEventProducerPort
 }
 
-func NewTweetUsecase(publisher ports.TweetPublisherPort) *TweetUsecase {
+var _ ports.TweetUseCasePort = (*TweetUseCase)(nil)
+
+func (uc *TweetUseCase) PublishTweet(ctx context.Context, event domain.TweetPublishEventDTO) error {
+	return uc.Producer.PublishTweet(ctx, event)
+}
+
+type TweetUsecase struct {
+	Publisher ports.TweetEventProducerPort
+}
+
+func NewTweetUsecase(publisher ports.TweetEventProducerPort) *TweetUsecase {
 	return &TweetUsecase{Publisher: publisher}
 }
 
@@ -20,7 +33,7 @@ type TweetInput struct {
 }
 
 func (uc *TweetUsecase) PublishTweet(ctx context.Context, input TweetInput) error {
-	event := kafka.TweetPublishedEventDTO{
+	event := domain.TweetPublishEventDTO{
 		ID:        "",
 		AuthorID:  input.AuthorID,
 		Content:   input.Content,

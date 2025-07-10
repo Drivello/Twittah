@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
-	"go.uber.org/zap"
 )
 
 // GatewayConfig holds all configuration for the Gateway Service.
 type GatewayConfig struct {
-	Port            string
-	KafkaBrokers    []string
-	KafkaFollowsTopic string
-	KafkaUserTopic  string
+	Port                string
+	KafkaBrokers        []string
+	KafkaUserTopic      string
+	KafkaFollowTopic    string
+	KafkaTweetTopic     string
+	LogLevel            string
+	UserMicroserviceURL string
 }
 
 // LoadConfig loads all required configuration from environment variables.
@@ -28,34 +31,51 @@ func LoadConfig() (*GatewayConfig, error) {
 		return nil, fmt.Errorf("KAFKA_BROKERS env var required")
 	}
 	brokers := strings.Split(brokersStr, ",")
-	followsTopic := os.Getenv("KAFKA_FOLLOWS_TOPIC")
-	if followsTopic == "" {
+
+	followTopic := os.Getenv("KAFKA_FOLLOWS_TOPIC")
+	if followTopic == "" {
 		return nil, fmt.Errorf("KAFKA_FOLLOWS_TOPIC env var required")
 	}
 	userTopic := os.Getenv("KAFKA_USER_TOPIC")
 	if userTopic == "" {
 		return nil, fmt.Errorf("KAFKA_USER_TOPIC env var required")
 	}
+	tweetTopic := os.Getenv("KAFKA_TWEET_TOPIC")
+	if tweetTopic == "" {
+		return nil, fmt.Errorf("KAFKA_TWEET_TOPIC env var required")
+	}
+
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	userMicroserviceURL := os.Getenv("USER_MICROSERVICE_URL")
+	if userMicroserviceURL == "" {
+		return nil, fmt.Errorf("USER_MICROSERVICE_URL env var required")
+	}
 	return &GatewayConfig{
-		Port: port,
-		KafkaBrokers: brokers,
-		KafkaFollowsTopic: followsTopic,
-		KafkaUserTopic: userTopic,
+		Port:                port,
+		KafkaBrokers:        brokers,
+		KafkaUserTopic:      userTopic,
+		KafkaFollowTopic:    followTopic,
+		KafkaTweetTopic:     tweetTopic,
+		LogLevel:            logLevel,
+		UserMicroserviceURL: userMicroserviceURL,
 	}, nil
 }
 
-func InitLogger() (*zap.Logger, error) {
-	return zap.NewProduction()
-}
-
-func InitKafkaProducers(cfg *GatewayConfig) (*kafka.FollowEventProducer, *kafka.UserEventProducer, error) {
-	followProducer, err := kafka.NewFollowEventProducer(cfg.KafkaBrokers, cfg.KafkaFollowsTopic)
+func InitKafkaProducers(cfg *GatewayConfig) (*kafka.AuthEventProducer, *kafka.UserEventProducer, *kafka.TweetEventProducer, error) {
+	authProducer, err := kafka.NewAuthEventProducer(cfg.KafkaBrokers, cfg.KafkaFollowTopic)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	userProducer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaUserTopic)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return followProducer, userProducer, nil
+	tweetProducer, err := kafka.NewTweetEventProducer(cfg.KafkaBrokers, cfg.KafkaTweetTopic)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return authProducer, userProducer, tweetProducer, nil
 }
