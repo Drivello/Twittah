@@ -6,6 +6,6 @@ import (
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 )
 
-type UserUseCasePort interface {
-	RegisterUser(ctx context.Context, user *domain.User) (int64, error)
+type AuthUseCasesPort interface {
+	RegisterUser(ctx context.Context, user domain.User) (int64, error)
 }

@@ -1,6 +1,22 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"regexp"
+	"time"
+)
+
+var (
+	ErrInvalidPayload = errors.New("invalid payload")
+
+	ErrUserAlreadyExists = errors.New("user already exists")
+)
+
+func IsValidEmail(email string) bool {
+	// Regex sencilla para validar email
+	var re = regexp.MustCompile(`^[a-zA-Z0-9._%%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
+}
 
 // User represents an Auth user entity.
 type User struct {

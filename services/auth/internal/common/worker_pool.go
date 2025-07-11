@@ -1,20 +1,21 @@
-package kafka
+package common
 
 import (
 	"context"
 	"fmt"
+	"math"
+	"runtime"
 	"sync"
 	"time"
 
-	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"go.uber.org/zap"
 )
 
 // WorkItem represents a unit of work for the worker pool (user creation request)
 type WorkItem struct {
 	Ctx     context.Context
-	Request UserCreateRequest
-	Msg     interface{} // original Kafka message, for marking as processed
+	Request interface{}
+	Msg     interface{}
 }
 
 // WorkQueue manages a pool of workers to process WorkItems
@@ -37,22 +38,28 @@ func NewWorkQueue(workers int, queueSize int) *WorkQueue {
 
 // Start launches the worker pool
 func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duration) {
+
+	Logger().Debug("Starting worker pool",
+		zap.String("max_retry_duration", maxRetryDuration.String()),
+		zap.Int("workers", wq.workers),
+		zap.Int("queue_size", cap(wq.queue)))
+
 	for i := 0; i < wq.workers; i++ {
 		workerID := i + 1
 		wq.wg.Add(1)
 		go func(id int) {
 			defer wq.wg.Done()
-			common.Logger().Info("Worker started", zap.Int("worker_id", id))
+			Logger().Info("Worker started", zap.Int("worker_id", id))
 			for {
 				select {
 				case item := <-wq.queue:
-					common.Logger().Debug("Worker processing item", zap.Int("worker_id", id))
+					Logger().Debug("Worker processing item", zap.Int("worker_id", id))
 
-					// 🔥 Crear un contexto desacoplado con timeout para el retry
+					// Crear un contexto desacoplado con timeout para el retry
 					ctx, cancel := context.WithTimeout(context.Background(), maxRetryDuration)
 					defer cancel()
 
-					// 🔥 Pasar una copia del item con el contexto desacoplado
+					// Pasar una copia del item con el contexto desacoplado
 					safeItem := WorkItem{
 						Ctx:     ctx,
 						Request: item.Request,
@@ -68,10 +75,10 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 					select {
 					case <-done:
 						// Processing completed successfully
-						common.Logger().Debug("Worker finished item", zap.Int("worker_id", id))
+						Logger().Debug("Worker finished item", zap.Int("worker_id", id))
 					case <-ctx.Done():
 						// Context for this work item was cancelled or timed out
-						common.Logger().Warn("WorkItem timeout/cancelled",
+						Logger().Warn("WorkItem timeout/cancelled",
 							zap.Int("worker_id", id),
 							zap.Error(ctx.Err()))
 						// Wait for the process goroutine to finish to avoid goroutine leaks
@@ -79,7 +86,7 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 					}
 
 				case <-wq.shutdown:
-					common.Logger().Info("Worker shutting down", zap.Int("worker_id", id))
+					Logger().Info("Worker shutting down", zap.Int("worker_id", id))
 					return
 				}
 			}
@@ -91,12 +98,12 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 func (wq *WorkQueue) Submit(item WorkItem) error {
 	select {
 	case wq.queue <- item:
-		common.Logger().Info("WorkQueue state",
+		Logger().Info("WorkQueue state",
 			zap.Int("queue_len", len(wq.queue)),
 			zap.Int("queue_capacity", cap(wq.queue)))
 		return nil
 	default:
-		common.Logger().Warn("WorkQueue FULL",
+		Logger().Warn("WorkQueue FULL",
 			zap.Int("queue_len", len(wq.queue)),
 			zap.Int("queue_capacity", cap(wq.queue)))
 		return fmt.Errorf("work queue full")
@@ -105,8 +112,20 @@ func (wq *WorkQueue) Submit(item WorkItem) error {
 
 // Stop gracefully shuts down the worker pool
 func (wq *WorkQueue) Stop() {
-	common.Logger().Info("Shutting down workers", zap.Int("active_workers", wq.workers))
+	Logger().Info("Shutting down workers", zap.Int("active_workers", wq.workers))
 	close(wq.shutdown)
 	wq.wg.Wait()
-	common.Logger().Info("All workers stopped")
+	Logger().Info("All workers stopped")
+}
+
+// CalculateWorkerConfig calculates worker count and queue size based on CPU
+func CalculateWorkerConfig(ioBound bool) (workers int, queue int) {
+	numCPU := runtime.NumCPU()
+	if ioBound {
+		workers = int(math.Max(1, float64(numCPU*2))) // 2x CPUs for I/O
+	} else {
+		workers = numCPU // 1x CPUs for CPU-bound
+	}
+	queue = workers * 4 // buffer factor
+	return
 }

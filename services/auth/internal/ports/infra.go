@@ -6,7 +6,6 @@ import "context"
 // Implemented by adapters/postgres
 // Used by adapters/http
 // Should be mocked in tests
-//
 type EntClient interface {
 	Ping(ctx context.Context) error
 }
@@ -15,7 +14,6 @@ type EntClient interface {
 // Implemented by adapters/kafka
 // Used by adapters/http
 // Should be mocked in tests
-//
 type KafkaTopicLister interface {
 	Topics() ([]string, error)
 }
