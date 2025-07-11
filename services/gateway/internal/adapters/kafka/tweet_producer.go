@@ -37,7 +37,7 @@ func NewTweetEventProducer(brokers []string, topic string) (*TweetEventProducer,
 }
 
 // PublishTweet implementa ports.TweetEventProducerPort
-func (p *TweetEventProducer) PublishTweet(ctx context.Context, event domain.TweetPublishEventDTO) error {
+func (p *TweetEventProducer) PublishTweet(ctx context.Context, event domain.KafkaEventRequest) error {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		common.Logger().Errorw("Failed to marshal tweet event", "error", err)

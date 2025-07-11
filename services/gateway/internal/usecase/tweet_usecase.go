@@ -15,7 +15,7 @@ type TweetUseCase struct {
 
 var _ ports.TweetUseCasePort = (*TweetUseCase)(nil)
 
-func (uc *TweetUseCase) PublishTweet(ctx context.Context, event domain.TweetPublishEventDTO) error {
+func (uc *TweetUseCase) PublishTweet(ctx context.Context, event domain.KafkaEventRequest) error {
 	return uc.Producer.PublishTweet(ctx, event)
 }
 
@@ -33,11 +33,12 @@ type TweetInput struct {
 }
 
 func (uc *TweetUsecase) PublishTweet(ctx context.Context, input TweetInput) error {
-	event := domain.TweetPublishEventDTO{
-		ID:        "",
-		AuthorID:  input.AuthorID,
-		Content:   input.Content,
-		CreatedAt: "",
+	event := domain.KafkaEventRequest{
+		EventType: "tweet_created",
+		Payload: map[string]interface{}{
+			"author_id": input.AuthorID,
+			"content":   input.Content,
+		},
 	}
 	return uc.Publisher.PublishTweet(ctx, event)
 }

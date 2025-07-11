@@ -24,5 +24,5 @@ type UserUseCasePort interface {
 
 // TweetUseCasePort define las operaciones de negocio para tweets
 type TweetUseCasePort interface {
-	PublishTweet(ctx context.Context, event domain.TweetPublishEventDTO) error
+	PublishTweet(ctx context.Context, event domain.KafkaEventRequest) error
 }

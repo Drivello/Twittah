@@ -13,5 +13,5 @@ type UserEventProducerPort interface {
 }
 
 type TweetEventProducerPort interface {
-	PublishTweet(ctx context.Context, event domain.TweetPublishEventDTO) error
+	PublishTweet(ctx context.Context, event domain.KafkaEventRequest) error
 }

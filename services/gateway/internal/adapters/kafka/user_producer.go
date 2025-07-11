@@ -38,10 +38,12 @@ func NewUserEventProducer(brokers []string, topic string) (*UserEventProducer, e
 // followeeID: ID of the user being followed.
 // Returns error if publishing fails.
 func (p *UserEventProducer) PublishFollow(ctx context.Context, followerID, followeeID string) error {
-	event := domain.UserEvent{
-		EventType:  "follow_created",
-		FollowerID: followerID,
-		FolloweeID: followeeID,
+	event := domain.KafkaEventRequest{
+		EventType: "follow_created",
+		Payload: map[string]interface{}{
+			"follower_id": followerID,
+			"followee_id": followeeID,
+		},
 	}
 	return p.publishEvent(event)
 }
@@ -51,15 +53,17 @@ func (p *UserEventProducer) PublishFollow(ctx context.Context, followerID, follo
 // followeeID: ID of the user being unfollowed.
 // Returns error if publishing fails.
 func (p *UserEventProducer) PublishUnfollow(ctx context.Context, followerID, followeeID string) error {
-	event := domain.UserEvent{
-		EventType:  "follow_deleted",
-		FollowerID: followerID,
-		FolloweeID: followeeID,
+	event := domain.KafkaEventRequest{
+		EventType: "follow_deleted",
+		Payload: map[string]interface{}{
+			"follower_id": followerID,
+			"followee_id": followeeID,
+		},
 	}
 	return p.publishEvent(event)
 }
 
-func (p *UserEventProducer) publishEvent(event domain.UserEvent) error {
+func (p *UserEventProducer) publishEvent(event domain.KafkaEventRequest) error {
 	msgBytes, err := json.Marshal(event)
 	if err != nil {
 		common.Logger().Errorw("Failed to marshal follow event", "error", err)
