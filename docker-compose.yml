@@ -117,7 +117,7 @@ services:
     environment:
       - KAFKA_BROKERS=kafka:9092
       - GATEWAY_PORT=8081
-      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_AUTH_TOPIC=users.events
       - KAFKA_FOLLOWS_TOPIC=follows.events
       - KAFKA_TWEET_TOPIC=tweets.events
       - KAFKA_TIMELINE_TOPIC=timelines.updated
@@ -145,7 +145,7 @@ services:
       - KAFKA_USER_TOPIC=users.events
       - KAFKA_AUTH_CONSUMER_GROUP_NAME=auth-user-event-group
       - KAFKA_AUTH_DLQ_CONSUMER_GROUP_NAME=auth-user-event-dlq-group
-      - USER_CREATED_EVENT_TYPE=user.created.to.replicate
+      - USER_CREATED_EVENT_TYPE=users.created.to.replicate
       - RETRY_MAX_DURATION=2h
       - RETRY_MAX_BACKOFF=300s
       - RETRY_INITIAL_BACKOFF=5s
@@ -166,20 +166,15 @@ services:
     build:
       context: ./services/user
     environment:
-      - USER_POSTGRES_DSN=postgres://user:user@postgres-user:5432/user?sslmode=disable
       - REDIS_ADDR=redis-tweet:6379
+      - USER_POSTGRES_DSN=postgres://user:user@postgres-user:5432/user?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - USER_SERVICE_PORT=8083
-      - USER_KAFKA_GROUP_ID=user-service-group
-      - RETRY_DLQ_TOPIC=user.created.dlq
-      - DLQ_WORKER_SOURCE_TOPIC=user.created.dlq
-      - DLQ_WORKER_FINAL_DLQ_TOPIC=user.created.dlq.final
-      - USER_RETRY_MAX_DURATION=2h
-      - USER_RETRY_MAX_BACKOFF=30s
-      - USER_RETRY_INITIAL_BACKOFF=500ms
-      - USER_DLQ_WORKER_MAX_DURATION=1h
-      - USER_DLQ_WORKER_MAX_BACKOFF=5m
-      - USER_DLQ_WORKER_INITIAL_BACKOFF=5s
+      - KAFKA_FOLLOWS_EVENTS_TOPIC=follows.events
+      - KAFKA_USER_CREATED_TOPIC=users.created.to.replicate
+      - KAFKA_DLQ_TOPIC=users.created.to.replicate.dlq
+      - KAFKA_DLQ_WORKER_GROUP=user-dlq-worker-group
+      - KAFKA_USER_GROUP=user-service-group
       - LOG_LEVEL=debug
     depends_on:
       postgres-user:

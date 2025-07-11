@@ -18,6 +18,8 @@ create_topic() {
 }
 
 create_topic users.events
+create_topic users.created.to.replicate
+create_topic users.created.to.replicate.dlq
 create_topic follows.events
 create_topic tweets.events
 create_topic timelines.updated
