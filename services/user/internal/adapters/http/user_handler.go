@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	"github.com/Drivello/Twittah/services/user/internal/common"
-	"go.uber.org/zap"
 	"github.com/Drivello/Twittah/services/user/internal/usecase"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -42,7 +42,7 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 		return
 	}
 	common.Logger().Debug("[UserService] GetFollowers handler success", zap.Int64("user_id", userID), zap.Any("followers", followers))
-	resp := FollowersResponseDTO{Followers: followers}
+	resp := GetFollowersResponseDTO{Followers: followers}
 	c.JSON(200, resp)
 }
 
@@ -58,6 +58,6 @@ func (h *UserHandler) GetFollowing(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp := FollowingResponseDTO{Following: following}
+	resp := GetFollowingResponseDTO{Following: following}
 	c.JSON(200, resp)
 }

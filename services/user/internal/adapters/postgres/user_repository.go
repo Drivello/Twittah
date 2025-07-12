@@ -80,9 +80,9 @@ func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, follow
 	return nil
 }
 
-func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]int64, error) {
+func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]*domain.User, error) {
 	common.Logger().Debug("[UserRepository] GetFollowers", zap.Int64("user_id", userID))
-	followers, err := r.client.User.
+	response, err := r.client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
 		QueryFollowers().
@@ -90,15 +90,18 @@ func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]i
 	if err != nil {
 		return nil, fmt.Errorf("failed to get followers: %w", err)
 	}
-	ids := make([]int64, len(followers))
-	for i, f := range followers {
-		ids[i] = f.ID
+	followers := make([]*domain.User, len(response))
+	for i, f := range response {
+		followers[i] = &domain.User{
+			ID:       f.ID,
+			Username: f.Username,
+		}
 	}
-	return ids, nil
+	return followers, nil
 }
 
-func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]int64, error) {
-	following, err := r.client.User.
+func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]*domain.User, error) {
+	response, err := r.client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
 		QueryFollowing().
@@ -106,11 +109,14 @@ func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]i
 	if err != nil {
 		return nil, fmt.Errorf("failed to get following: %w", err)
 	}
-	ids := make([]int64, len(following))
-	for i, f := range following {
-		ids[i] = f.ID
+	following := make([]*domain.User, len(response))
+	for i, f := range response {
+		following[i] = &domain.User{
+			ID:       f.ID,
+			Username: f.Username,
+		}
 	}
-	return ids, nil
+	return following, nil
 }
 
 func (r *EntUserRepository) Exists(ctx context.Context, userID int64) (bool, error) {

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
@@ -28,27 +29,24 @@ func (h *TweetHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // PostTweet handles tweet publishing requests (mock).
 // c: Gin context.
 func (h *TweetHandler) PostTweet(c *gin.Context) {
-	var req TweetRequestDTO
+	var req dto.TweetCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, TweetPublishResponseDTO{Message: "Invalid tweet request"})
+		c.JSON(400, dto.TweetCreateResponse{Message: "Invalid tweet request"})
 		return
 	}
 
 	err := h.createTweetUseCase.Execute(c.Request.Context(), req.AuthorID, req.Content)
 	if err != nil {
-		c.JSON(500, TweetPublishResponseDTO{Message: "No se pudo publicar el tweet"})
+		c.JSON(500, dto.TweetCreateResponse{Message: "No se pudo publicar el tweet"})
 		return
 	}
-	c.JSON(202, TweetPublishResponseDTO{Message: "Tweet enviado para publicación"})
+	c.JSON(202, dto.TweetCreateResponse{Message: "Tweet enviado para publicación"})
 }
 
 // GetTimeline handles timeline retrieval requests (mock).
 // c: Gin context.
 func (h *TweetHandler) GetTimeline(c *gin.Context) {
 	// TODO: Obtener timeline real
-	type TimelineResponseDTO struct {
-		Timeline []string `json:"timeline"`
-	}
-	resp := TimelineResponseDTO{Timeline: []string{}}
-	c.JSON(200, resp)
+	//resp := dto.GetTimelineResponse{Timeline: []string{}}
+	c.JSON(200, nil)
 }

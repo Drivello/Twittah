@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+
+	"github.com/Drivello/Twittah/services/user/internal/domain"
 	"github.com/Drivello/Twittah/services/user/internal/ports"
 )
 
@@ -13,6 +15,6 @@ func NewGetFollowingUseCase(repo ports.UserRepository) *GetFollowingUseCase {
 	return &GetFollowingUseCase{repo: repo}
 }
 
-func (uc *GetFollowingUseCase) Execute(ctx context.Context, userID int64) ([]int64, error) {
+func (uc *GetFollowingUseCase) Execute(ctx context.Context, userID int64) ([]*domain.User, error) {
 	return uc.repo.GetFollowing(ctx, userID)
 }

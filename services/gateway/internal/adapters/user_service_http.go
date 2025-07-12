@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
+	"github.com/Drivello/Twittah/services/gateway/internal/domain"
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"go.uber.org/zap"
 )
@@ -18,7 +20,7 @@ func NewUserServiceHTTPAdapter(baseURL string) *UserServiceHTTPAdapter {
 	return &UserServiceHTTPAdapter{BaseURL: baseURL}
 }
 
-func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID string) ([]string, error) {
+func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID string) ([]*domain.User, error) {
 	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers called", zap.String("user_id", userID), zap.String("url", a.BaseURL+"/followers/"+userID))
 	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/followers/"+userID, nil)
 	if err != nil {
@@ -37,11 +39,16 @@ func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID string
 		return nil, fmt.Errorf("failed to get followers: %s", resp.Status)
 	}
 
-	var followers []string
-	if err := json.NewDecoder(resp.Body).Decode(&followers); err != nil {
+	var followersDTO dto.GetFollowersResponse
+	if err := json.NewDecoder(resp.Body).Decode(&followersDTO); err != nil {
 		common.Logger().Debug("[Gateway] UserServiceHTTPAdapter decode error", zap.Error(err))
 		return nil, err
 	}
-	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers success", zap.String("user_id", userID), zap.Any("followers", followers))
-	return followers, nil
+	// Map DTO to domain.User
+	users := make([]*domain.User, len(followersDTO.Followers))
+	for i, f := range followersDTO.Followers {
+		users[i] = &domain.User{ID: f.ID, Username: f.Username}
+	}
+	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers success", zap.String("user_id", userID), zap.Any("followers", users))
+	return users, nil
 }

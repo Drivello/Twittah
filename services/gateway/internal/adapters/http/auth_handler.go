@@ -1,13 +1,13 @@
 package http
 
 import (
+	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler handles authentication HTTP endpoints.
 type AuthHandler struct {
-	Kafka               KafkaTopicLister // Interfaz que exponga Topics() ([]string, error)
 	registerUserUseCase ports.RegisterUserUseCasePort
 }
 
@@ -26,7 +26,7 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 }
 
 func (h *AuthHandler) RegisterUser(c *gin.Context) {
-	var reqDTO RegisterUserRequestDTO
+	var reqDTO dto.RegisterUserRequest
 	if err := c.ShouldBindJSON(&reqDTO); err != nil {
 		WriteGenericError(c, 400)
 		return
@@ -39,6 +39,6 @@ func (h *AuthHandler) RegisterUser(c *gin.Context) {
 		WriteGenericError(c, 500)
 		return
 	}
-	resp := RegisterUserResponseDTO{Message: "Usuario registrado", Username: reqDTO.Username}
+	resp := dto.RegisterUserResponse{Message: "Usuario registrado", Username: reqDTO.Username}
 	c.JSON(201, resp)
 }

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
+	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
 	"go.uber.org/zap"
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,11 @@ func (h *UserQueryHandler) GetFollowers(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"followers": nil})
 		return
 	}
-	common.Logger().Debug("[Gateway] GetFollowers handler success", zap.String("user_id", userID), zap.Any("followers", followers))
-	c.JSON(http.StatusOK, gin.H{"followers": followers})
+	// Map domain.User to DTO
+	dtos := make([]dto.FollowerUserDTO, len(followers))
+	for i, f := range followers {
+		dtos[i] = dto.FollowerUserDTO{ID: f.ID, Username: f.Username}
+	}
+	common.Logger().Debug("[Gateway] GetFollowers handler success", zap.String("user_id", userID), zap.Any("followers", dtos))
+	c.JSON(http.StatusOK, dto.GetFollowersResponse{Followers: dtos})
 }

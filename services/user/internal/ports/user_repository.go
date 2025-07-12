@@ -17,7 +17,7 @@ type UserRepository interface {
 	// UnfollowUser removes a follow relationship.
 	UnfollowUser(ctx context.Context, followerID, followeeID int64) error
 	// GetFollowers returns the IDs of users who follow the given user.
-	GetFollowers(ctx context.Context, userID int64) ([]int64, error)
+	GetFollowers(ctx context.Context, userID int64) ([]*domain.User, error)
 	// GetFollowing returns the IDs of users followed by the given user.
-	GetFollowing(ctx context.Context, userID int64) ([]int64, error)
+	GetFollowing(ctx context.Context, userID int64) ([]*domain.User, error)
 }
