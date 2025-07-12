@@ -1,10 +1,11 @@
 package schema
 
 import (
-	"entgo.io/ent"
-	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
 	"time"
+
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
 )
 
 // Tweet holds the schema definition for the Tweet entity.
@@ -15,16 +16,24 @@ type Tweet struct {
 // Fields of the Tweet.
 func (Tweet) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("author_id").NotEmpty(),
-		field.String("content").NotEmpty(),
-		field.Time("created_at").Default(time.Now),
+		field.Int64("id").
+			Positive().
+			Immutable().
+			Unique().
+			StructTag(`json:"id,omitempty"`),
+		field.String("content").
+			NotEmpty().
+			MaxLen(280),
+		field.Time("created_at").
+			Default(time.Now),
 	}
 }
 
-// Indexes of the Tweet.
-func (Tweet) Indexes() []ent.Index {
-	return []ent.Index{
-		index.Fields("author_id"),
-		index.Fields("created_at"),
+// Edges of the Tweet.
+func (Tweet) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("author", User.Type).
+			Ref("tweets").
+			Required(),
 	}
 }

@@ -1,16 +1,13 @@
-# --- Build Stage ---
-FROM golang:1.23-alpine AS build
+FROM golang:1.23-alpine as builder
 WORKDIR /app
 COPY . .
+RUN apk add --no-cache git
 RUN go mod download
-RUN go build -o tweetservice ./cmd/...
+RUN go build -o tweet-service ./cmd/main.go
 
-# --- Runtime Stage ---
 FROM alpine:latest
 WORKDIR /app
-COPY --from=build /app/tweetservice .
-COPY .env-example .env
+COPY --from=builder /app/tweet-service .
+COPY .env .
 EXPOSE 8080
-ENV GIN_MODE=release
-# IMPORTANT: Pass real secrets/variables at runtime, never in the image.
-CMD ["./tweetservice"]
+CMD ["./tweet-service"]

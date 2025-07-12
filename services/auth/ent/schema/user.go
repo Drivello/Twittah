@@ -15,7 +15,7 @@ type User struct {
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int64("id").Positive().Immutable().StructTag(`json:"id,omitempty"`),
+		field.Int64("id").Positive().Immutable().Unique().StructTag(`json:"id,omitempty"`),
 		field.String("username").NotEmpty().Unique(),
 		field.String("email").NotEmpty().Unique(),
 		field.String("password").NotEmpty(),

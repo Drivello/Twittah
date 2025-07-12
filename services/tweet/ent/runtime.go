@@ -7,6 +7,7 @@ import (
 
 	"github.com/Drivello/Twittah/services/tweet/ent/schema"
 	"github.com/Drivello/Twittah/services/tweet/ent/tweet"
+	"github.com/Drivello/Twittah/services/tweet/ent/user"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -15,16 +16,40 @@ import (
 func init() {
 	tweetFields := schema.Tweet{}.Fields()
 	_ = tweetFields
-	// tweetDescAuthorID is the schema descriptor for author_id field.
-	tweetDescAuthorID := tweetFields[0].Descriptor()
-	// tweet.AuthorIDValidator is a validator for the "author_id" field. It is called by the builders before save.
-	tweet.AuthorIDValidator = tweetDescAuthorID.Validators[0].(func(string) error)
 	// tweetDescContent is the schema descriptor for content field.
 	tweetDescContent := tweetFields[1].Descriptor()
 	// tweet.ContentValidator is a validator for the "content" field. It is called by the builders before save.
-	tweet.ContentValidator = tweetDescContent.Validators[0].(func(string) error)
+	tweet.ContentValidator = func() func(string) error {
+		validators := tweetDescContent.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(content string) error {
+			for _, fn := range fns {
+				if err := fn(content); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// tweetDescCreatedAt is the schema descriptor for created_at field.
 	tweetDescCreatedAt := tweetFields[2].Descriptor()
 	// tweet.DefaultCreatedAt holds the default value on creation for the created_at field.
 	tweet.DefaultCreatedAt = tweetDescCreatedAt.Default.(func() time.Time)
+	// tweetDescID is the schema descriptor for id field.
+	tweetDescID := tweetFields[0].Descriptor()
+	// tweet.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	tweet.IDValidator = tweetDescID.Validators[0].(func(int64) error)
+	userFields := schema.User{}.Fields()
+	_ = userFields
+	// userDescUsername is the schema descriptor for username field.
+	userDescUsername := userFields[1].Descriptor()
+	// user.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
+	user.UsernameValidator = userDescUsername.Validators[0].(func(string) error)
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	user.IDValidator = userDescID.Validators[0].(func(int64) error)
 }

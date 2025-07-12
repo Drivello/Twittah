@@ -8,3 +8,6 @@ import (
 
 // Tweet is the predicate function for tweet builders.
 type Tweet func(*sql.Selector)
+
+// User is the predicate function for user builders.
+type User func(*sql.Selector)

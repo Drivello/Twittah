@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Drivello/Twittah/services/tweet/ent/predicate"
 	"github.com/Drivello/Twittah/services/tweet/ent/tweet"
+	"github.com/Drivello/Twittah/services/tweet/ent/user"
 )
 
 // TweetUpdate is the builder for updating Tweet entities.
@@ -25,20 +26,6 @@ type TweetUpdate struct {
 // Where appends a list predicates to the TweetUpdate builder.
 func (tu *TweetUpdate) Where(ps ...predicate.Tweet) *TweetUpdate {
 	tu.mutation.Where(ps...)
-	return tu
-}
-
-// SetAuthorID sets the "author_id" field.
-func (tu *TweetUpdate) SetAuthorID(s string) *TweetUpdate {
-	tu.mutation.SetAuthorID(s)
-	return tu
-}
-
-// SetNillableAuthorID sets the "author_id" field if the given value is not nil.
-func (tu *TweetUpdate) SetNillableAuthorID(s *string) *TweetUpdate {
-	if s != nil {
-		tu.SetAuthorID(*s)
-	}
 	return tu
 }
 
@@ -70,9 +57,45 @@ func (tu *TweetUpdate) SetNillableCreatedAt(t *time.Time) *TweetUpdate {
 	return tu
 }
 
+// AddAuthorIDs adds the "author" edge to the User entity by IDs.
+func (tu *TweetUpdate) AddAuthorIDs(ids ...int64) *TweetUpdate {
+	tu.mutation.AddAuthorIDs(ids...)
+	return tu
+}
+
+// AddAuthor adds the "author" edges to the User entity.
+func (tu *TweetUpdate) AddAuthor(u ...*User) *TweetUpdate {
+	ids := make([]int64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return tu.AddAuthorIDs(ids...)
+}
+
 // Mutation returns the TweetMutation object of the builder.
 func (tu *TweetUpdate) Mutation() *TweetMutation {
 	return tu.mutation
+}
+
+// ClearAuthor clears all "author" edges to the User entity.
+func (tu *TweetUpdate) ClearAuthor() *TweetUpdate {
+	tu.mutation.ClearAuthor()
+	return tu
+}
+
+// RemoveAuthorIDs removes the "author" edge to User entities by IDs.
+func (tu *TweetUpdate) RemoveAuthorIDs(ids ...int64) *TweetUpdate {
+	tu.mutation.RemoveAuthorIDs(ids...)
+	return tu
+}
+
+// RemoveAuthor removes "author" edges to User entities.
+func (tu *TweetUpdate) RemoveAuthor(u ...*User) *TweetUpdate {
+	ids := make([]int64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return tu.RemoveAuthorIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,11 +127,6 @@ func (tu *TweetUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tu *TweetUpdate) check() error {
-	if v, ok := tu.mutation.AuthorID(); ok {
-		if err := tweet.AuthorIDValidator(v); err != nil {
-			return &ValidationError{Name: "author_id", err: fmt.Errorf(`ent: validator failed for field "Tweet.author_id": %w`, err)}
-		}
-	}
 	if v, ok := tu.mutation.Content(); ok {
 		if err := tweet.ContentValidator(v); err != nil {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Tweet.content": %w`, err)}
@@ -121,7 +139,7 @@ func (tu *TweetUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tu.check(); err != nil {
 		return n, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(tweet.Table, tweet.Columns, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(tweet.Table, tweet.Columns, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt64))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -129,14 +147,56 @@ func (tu *TweetUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := tu.mutation.AuthorID(); ok {
-		_spec.SetField(tweet.FieldAuthorID, field.TypeString, value)
-	}
 	if value, ok := tu.mutation.Content(); ok {
 		_spec.SetField(tweet.FieldContent, field.TypeString, value)
 	}
 	if value, ok := tu.mutation.CreatedAt(); ok {
 		_spec.SetField(tweet.FieldCreatedAt, field.TypeTime, value)
+	}
+	if tu.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.RemovedAuthorIDs(); len(nodes) > 0 && !tu.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -156,20 +216,6 @@ type TweetUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *TweetMutation
-}
-
-// SetAuthorID sets the "author_id" field.
-func (tuo *TweetUpdateOne) SetAuthorID(s string) *TweetUpdateOne {
-	tuo.mutation.SetAuthorID(s)
-	return tuo
-}
-
-// SetNillableAuthorID sets the "author_id" field if the given value is not nil.
-func (tuo *TweetUpdateOne) SetNillableAuthorID(s *string) *TweetUpdateOne {
-	if s != nil {
-		tuo.SetAuthorID(*s)
-	}
-	return tuo
 }
 
 // SetContent sets the "content" field.
@@ -200,9 +246,45 @@ func (tuo *TweetUpdateOne) SetNillableCreatedAt(t *time.Time) *TweetUpdateOne {
 	return tuo
 }
 
+// AddAuthorIDs adds the "author" edge to the User entity by IDs.
+func (tuo *TweetUpdateOne) AddAuthorIDs(ids ...int64) *TweetUpdateOne {
+	tuo.mutation.AddAuthorIDs(ids...)
+	return tuo
+}
+
+// AddAuthor adds the "author" edges to the User entity.
+func (tuo *TweetUpdateOne) AddAuthor(u ...*User) *TweetUpdateOne {
+	ids := make([]int64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return tuo.AddAuthorIDs(ids...)
+}
+
 // Mutation returns the TweetMutation object of the builder.
 func (tuo *TweetUpdateOne) Mutation() *TweetMutation {
 	return tuo.mutation
+}
+
+// ClearAuthor clears all "author" edges to the User entity.
+func (tuo *TweetUpdateOne) ClearAuthor() *TweetUpdateOne {
+	tuo.mutation.ClearAuthor()
+	return tuo
+}
+
+// RemoveAuthorIDs removes the "author" edge to User entities by IDs.
+func (tuo *TweetUpdateOne) RemoveAuthorIDs(ids ...int64) *TweetUpdateOne {
+	tuo.mutation.RemoveAuthorIDs(ids...)
+	return tuo
+}
+
+// RemoveAuthor removes "author" edges to User entities.
+func (tuo *TweetUpdateOne) RemoveAuthor(u ...*User) *TweetUpdateOne {
+	ids := make([]int64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return tuo.RemoveAuthorIDs(ids...)
 }
 
 // Where appends a list predicates to the TweetUpdate builder.
@@ -247,11 +329,6 @@ func (tuo *TweetUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tuo *TweetUpdateOne) check() error {
-	if v, ok := tuo.mutation.AuthorID(); ok {
-		if err := tweet.AuthorIDValidator(v); err != nil {
-			return &ValidationError{Name: "author_id", err: fmt.Errorf(`ent: validator failed for field "Tweet.author_id": %w`, err)}
-		}
-	}
 	if v, ok := tuo.mutation.Content(); ok {
 		if err := tweet.ContentValidator(v); err != nil {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Tweet.content": %w`, err)}
@@ -264,7 +341,7 @@ func (tuo *TweetUpdateOne) sqlSave(ctx context.Context) (_node *Tweet, err error
 	if err := tuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(tweet.Table, tweet.Columns, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(tweet.Table, tweet.Columns, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt64))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Tweet.id" for update`)}
@@ -289,14 +366,56 @@ func (tuo *TweetUpdateOne) sqlSave(ctx context.Context) (_node *Tweet, err error
 			}
 		}
 	}
-	if value, ok := tuo.mutation.AuthorID(); ok {
-		_spec.SetField(tweet.FieldAuthorID, field.TypeString, value)
-	}
 	if value, ok := tuo.mutation.Content(); ok {
 		_spec.SetField(tweet.FieldContent, field.TypeString, value)
 	}
 	if value, ok := tuo.mutation.CreatedAt(); ok {
 		_spec.SetField(tweet.FieldCreatedAt, field.TypeTime, value)
+	}
+	if tuo.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.RemovedAuthorIDs(); len(nodes) > 0 && !tuo.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Tweet{config: tuo.config}
 	_spec.Assign = _node.assignValues

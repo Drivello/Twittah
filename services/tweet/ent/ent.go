@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Drivello/Twittah/services/tweet/ent/tweet"
+	"github.com/Drivello/Twittah/services/tweet/ent/user"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -74,6 +75,7 @@ func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			tweet.Table: tweet.ValidColumn,
+			user.Table:  user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

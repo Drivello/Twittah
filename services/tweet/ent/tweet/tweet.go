@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -13,23 +14,33 @@ const (
 	Label = "tweet"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAuthorID holds the string denoting the author_id field in the database.
-	FieldAuthorID = "author_id"
 	// FieldContent holds the string denoting the content field in the database.
 	FieldContent = "content"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgeAuthor holds the string denoting the author edge name in mutations.
+	EdgeAuthor = "author"
 	// Table holds the table name of the tweet in the database.
 	Table = "tweets"
+	// AuthorTable is the table that holds the author relation/edge. The primary key declared below.
+	AuthorTable = "user_tweets"
+	// AuthorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	AuthorInverseTable = "users"
 )
 
 // Columns holds all SQL columns for tweet fields.
 var Columns = []string{
 	FieldID,
-	FieldAuthorID,
 	FieldContent,
 	FieldCreatedAt,
 }
+
+var (
+	// AuthorPrimaryKey and AuthorColumn2 are the table columns denoting the
+	// primary key for the author relation (M2M).
+	AuthorPrimaryKey = []string{"user_id", "tweet_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -42,12 +53,12 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// AuthorIDValidator is a validator for the "author_id" field. It is called by the builders before save.
-	AuthorIDValidator func(string) error
 	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
 	ContentValidator func(string) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
+	// IDValidator is a validator for the "id" field. It is called by the builders before save.
+	IDValidator func(int64) error
 )
 
 // OrderOption defines the ordering options for the Tweet queries.
@@ -58,11 +69,6 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByAuthorID orders the results by the author_id field.
-func ByAuthorID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAuthorID, opts...).ToFunc()
-}
-
 // ByContent orders the results by the content field.
 func ByContent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContent, opts...).ToFunc()
@@ -71,4 +77,25 @@ func ByContent(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByAuthorCount orders the results by author count.
+func ByAuthorCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAuthorStep(), opts...)
+	}
+}
+
+// ByAuthor orders the results by author terms.
+func ByAuthor(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAuthorStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newAuthorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AuthorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, AuthorTable, AuthorPrimaryKey...),
+	)
 }

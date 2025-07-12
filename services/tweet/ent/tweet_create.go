@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Drivello/Twittah/services/tweet/ent/tweet"
+	"github.com/Drivello/Twittah/services/tweet/ent/user"
 )
 
 // TweetCreate is the builder for creating a Tweet entity.
@@ -18,12 +19,6 @@ type TweetCreate struct {
 	config
 	mutation *TweetMutation
 	hooks    []Hook
-}
-
-// SetAuthorID sets the "author_id" field.
-func (tc *TweetCreate) SetAuthorID(s string) *TweetCreate {
-	tc.mutation.SetAuthorID(s)
-	return tc
 }
 
 // SetContent sets the "content" field.
@@ -44,6 +39,27 @@ func (tc *TweetCreate) SetNillableCreatedAt(t *time.Time) *TweetCreate {
 		tc.SetCreatedAt(*t)
 	}
 	return tc
+}
+
+// SetID sets the "id" field.
+func (tc *TweetCreate) SetID(i int64) *TweetCreate {
+	tc.mutation.SetID(i)
+	return tc
+}
+
+// AddAuthorIDs adds the "author" edge to the User entity by IDs.
+func (tc *TweetCreate) AddAuthorIDs(ids ...int64) *TweetCreate {
+	tc.mutation.AddAuthorIDs(ids...)
+	return tc
+}
+
+// AddAuthor adds the "author" edges to the User entity.
+func (tc *TweetCreate) AddAuthor(u ...*User) *TweetCreate {
+	ids := make([]int64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return tc.AddAuthorIDs(ids...)
 }
 
 // Mutation returns the TweetMutation object of the builder.
@@ -89,14 +105,6 @@ func (tc *TweetCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (tc *TweetCreate) check() error {
-	if _, ok := tc.mutation.AuthorID(); !ok {
-		return &ValidationError{Name: "author_id", err: errors.New(`ent: missing required field "Tweet.author_id"`)}
-	}
-	if v, ok := tc.mutation.AuthorID(); ok {
-		if err := tweet.AuthorIDValidator(v); err != nil {
-			return &ValidationError{Name: "author_id", err: fmt.Errorf(`ent: validator failed for field "Tweet.author_id": %w`, err)}
-		}
-	}
 	if _, ok := tc.mutation.Content(); !ok {
 		return &ValidationError{Name: "content", err: errors.New(`ent: missing required field "Tweet.content"`)}
 	}
@@ -107,6 +115,14 @@ func (tc *TweetCreate) check() error {
 	}
 	if _, ok := tc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Tweet.created_at"`)}
+	}
+	if v, ok := tc.mutation.ID(); ok {
+		if err := tweet.IDValidator(v); err != nil {
+			return &ValidationError{Name: "id", err: fmt.Errorf(`ent: validator failed for field "Tweet.id": %w`, err)}
+		}
+	}
+	if len(tc.mutation.AuthorIDs()) == 0 {
+		return &ValidationError{Name: "author", err: errors.New(`ent: missing required edge "Tweet.author"`)}
 	}
 	return nil
 }
@@ -122,8 +138,10 @@ func (tc *TweetCreate) sqlSave(ctx context.Context) (*Tweet, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int64(id)
+	}
 	tc.mutation.id = &_node.ID
 	tc.mutation.done = true
 	return _node, nil
@@ -132,11 +150,11 @@ func (tc *TweetCreate) sqlSave(ctx context.Context) (*Tweet, error) {
 func (tc *TweetCreate) createSpec() (*Tweet, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Tweet{config: tc.config}
-		_spec = sqlgraph.NewCreateSpec(tweet.Table, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt))
+		_spec = sqlgraph.NewCreateSpec(tweet.Table, sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt64))
 	)
-	if value, ok := tc.mutation.AuthorID(); ok {
-		_spec.SetField(tweet.FieldAuthorID, field.TypeString, value)
-		_node.AuthorID = value
+	if id, ok := tc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = id
 	}
 	if value, ok := tc.mutation.Content(); ok {
 		_spec.SetField(tweet.FieldContent, field.TypeString, value)
@@ -145,6 +163,22 @@ func (tc *TweetCreate) createSpec() (*Tweet, *sqlgraph.CreateSpec) {
 	if value, ok := tc.mutation.CreatedAt(); ok {
 		_spec.SetField(tweet.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := tc.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   tweet.AuthorTable,
+			Columns: tweet.AuthorPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }
@@ -194,9 +228,9 @@ func (tcb *TweetCreateBulk) Save(ctx context.Context) ([]*Tweet, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
 					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
+					nodes[i].ID = int64(id)
 				}
 				mutation.done = true
 				return nodes[i], nil

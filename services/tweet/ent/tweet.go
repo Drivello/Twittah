@@ -16,14 +16,33 @@ import (
 type Tweet struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
-	// AuthorID holds the value of the "author_id" field.
-	AuthorID string `json:"author_id,omitempty"`
+	ID int64 `json:"id,omitempty"`
 	// Content holds the value of the "content" field.
 	Content string `json:"content,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TweetQuery when eager-loading is set.
+	Edges        TweetEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TweetEdges holds the relations/edges for other nodes in the graph.
+type TweetEdges struct {
+	// Author holds the value of the author edge.
+	Author []*User `json:"author,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// AuthorOrErr returns the Author value or an error if the edge
+// was not loaded in eager-loading.
+func (e TweetEdges) AuthorOrErr() ([]*User, error) {
+	if e.loadedTypes[0] {
+		return e.Author, nil
+	}
+	return nil, &NotLoadedError{edge: "author"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -33,7 +52,7 @@ func (*Tweet) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case tweet.FieldID:
 			values[i] = new(sql.NullInt64)
-		case tweet.FieldAuthorID, tweet.FieldContent:
+		case tweet.FieldContent:
 			values[i] = new(sql.NullString)
 		case tweet.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -57,13 +76,7 @@ func (t *Tweet) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			t.ID = int(value.Int64)
-		case tweet.FieldAuthorID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field author_id", values[i])
-			} else if value.Valid {
-				t.AuthorID = value.String
-			}
+			t.ID = int64(value.Int64)
 		case tweet.FieldContent:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field content", values[i])
@@ -89,6 +102,11 @@ func (t *Tweet) Value(name string) (ent.Value, error) {
 	return t.selectValues.Get(name)
 }
 
+// QueryAuthor queries the "author" edge of the Tweet entity.
+func (t *Tweet) QueryAuthor() *UserQuery {
+	return NewTweetClient(t.config).QueryAuthor(t)
+}
+
 // Update returns a builder for updating this Tweet.
 // Note that you need to call Tweet.Unwrap() before calling this method if this Tweet
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -112,9 +130,6 @@ func (t *Tweet) String() string {
 	var builder strings.Builder
 	builder.WriteString("Tweet(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
-	builder.WriteString("author_id=")
-	builder.WriteString(t.AuthorID)
-	builder.WriteString(", ")
 	builder.WriteString("content=")
 	builder.WriteString(t.Content)
 	builder.WriteString(", ")

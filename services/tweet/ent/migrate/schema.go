@@ -10,9 +10,8 @@ import (
 var (
 	// TweetsColumns holds the columns for the "tweets" table.
 	TweetsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "author_id", Type: field.TypeString},
-		{Name: "content", Type: field.TypeString},
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "content", Type: field.TypeString, Size: 280},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// TweetsTable holds the schema information for the "tweets" table.
@@ -20,24 +19,52 @@ var (
 		Name:       "tweets",
 		Columns:    TweetsColumns,
 		PrimaryKey: []*schema.Column{TweetsColumns[0]},
-		Indexes: []*schema.Index{
+	}
+	// UsersColumns holds the columns for the "users" table.
+	UsersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "username", Type: field.TypeString, Unique: true},
+	}
+	// UsersTable holds the schema information for the "users" table.
+	UsersTable = &schema.Table{
+		Name:       "users",
+		Columns:    UsersColumns,
+		PrimaryKey: []*schema.Column{UsersColumns[0]},
+	}
+	// UserTweetsColumns holds the columns for the "user_tweets" table.
+	UserTweetsColumns = []*schema.Column{
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "tweet_id", Type: field.TypeInt64},
+	}
+	// UserTweetsTable holds the schema information for the "user_tweets" table.
+	UserTweetsTable = &schema.Table{
+		Name:       "user_tweets",
+		Columns:    UserTweetsColumns,
+		PrimaryKey: []*schema.Column{UserTweetsColumns[0], UserTweetsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
 			{
-				Name:    "tweet_author_id",
-				Unique:  false,
-				Columns: []*schema.Column{TweetsColumns[1]},
+				Symbol:     "user_tweets_user_id",
+				Columns:    []*schema.Column{UserTweetsColumns[0]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 			{
-				Name:    "tweet_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{TweetsColumns[3]},
+				Symbol:     "user_tweets_tweet_id",
+				Columns:    []*schema.Column{UserTweetsColumns[1]},
+				RefColumns: []*schema.Column{TweetsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		TweetsTable,
+		UsersTable,
+		UserTweetsTable,
 	}
 )
 
 func init() {
+	UserTweetsTable.ForeignKeys[0].RefTable = UsersTable
+	UserTweetsTable.ForeignKeys[1].RefTable = TweetsTable
 }
