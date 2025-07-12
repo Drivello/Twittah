@@ -26,31 +26,31 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// Following holds the value of the following edge.
-	Following []*User `json:"following,omitempty"`
 	// Followers holds the value of the followers edge.
 	Followers []*User `json:"followers,omitempty"`
+	// Following holds the value of the following edge.
+	Following []*User `json:"following,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// FollowingOrErr returns the Following value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) FollowingOrErr() ([]*User, error) {
-	if e.loadedTypes[0] {
-		return e.Following, nil
-	}
-	return nil, &NotLoadedError{edge: "following"}
-}
-
 // FollowersOrErr returns the Followers value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) FollowersOrErr() ([]*User, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		return e.Followers, nil
 	}
 	return nil, &NotLoadedError{edge: "followers"}
+}
+
+// FollowingOrErr returns the Following value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) FollowingOrErr() ([]*User, error) {
+	if e.loadedTypes[1] {
+		return e.Following, nil
+	}
+	return nil, &NotLoadedError{edge: "following"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -102,14 +102,14 @@ func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
 }
 
-// QueryFollowing queries the "following" edge of the User entity.
-func (u *User) QueryFollowing() *UserQuery {
-	return NewUserClient(u.config).QueryFollowing(u)
-}
-
 // QueryFollowers queries the "followers" edge of the User entity.
 func (u *User) QueryFollowers() *UserQuery {
 	return NewUserClient(u.config).QueryFollowers(u)
+}
+
+// QueryFollowing queries the "following" edge of the User entity.
+func (u *User) QueryFollowing() *UserQuery {
+	return NewUserClient(u.config).QueryFollowing(u)
 }
 
 // Update returns a builder for updating this User.

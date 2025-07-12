@@ -14,16 +14,16 @@ const (
 	FieldID = "id"
 	// FieldUsername holds the string denoting the username field in the database.
 	FieldUsername = "username"
-	// EdgeFollowing holds the string denoting the following edge name in mutations.
-	EdgeFollowing = "following"
 	// EdgeFollowers holds the string denoting the followers edge name in mutations.
 	EdgeFollowers = "followers"
+	// EdgeFollowing holds the string denoting the following edge name in mutations.
+	EdgeFollowing = "following"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// FollowingTable is the table that holds the following relation/edge. The primary key declared below.
-	FollowingTable = "user_following"
 	// FollowersTable is the table that holds the followers relation/edge. The primary key declared below.
 	FollowersTable = "user_following"
+	// FollowingTable is the table that holds the following relation/edge. The primary key declared below.
+	FollowingTable = "user_following"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -33,12 +33,12 @@ var Columns = []string{
 }
 
 var (
-	// FollowingPrimaryKey and FollowingColumn2 are the table columns denoting the
-	// primary key for the following relation (M2M).
-	FollowingPrimaryKey = []string{"user_id", "follower_id"}
 	// FollowersPrimaryKey and FollowersColumn2 are the table columns denoting the
 	// primary key for the followers relation (M2M).
 	FollowersPrimaryKey = []string{"user_id", "follower_id"}
+	// FollowingPrimaryKey and FollowingColumn2 are the table columns denoting the
+	// primary key for the following relation (M2M).
+	FollowingPrimaryKey = []string{"user_id", "follower_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -71,20 +71,6 @@ func ByUsername(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUsername, opts...).ToFunc()
 }
 
-// ByFollowingCount orders the results by following count.
-func ByFollowingCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFollowingStep(), opts...)
-	}
-}
-
-// ByFollowing orders the results by following terms.
-func ByFollowing(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFollowingStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByFollowersCount orders the results by followers count.
 func ByFollowersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -98,17 +84,31 @@ func ByFollowers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newFollowersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-func newFollowingStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(Table, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, FollowingTable, FollowingPrimaryKey...),
-	)
+
+// ByFollowingCount orders the results by following count.
+func ByFollowingCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFollowingStep(), opts...)
+	}
+}
+
+// ByFollowing orders the results by following terms.
+func ByFollowing(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFollowingStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
 }
 func newFollowersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(Table, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, true, FollowersTable, FollowersPrimaryKey...),
+	)
+}
+func newFollowingStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(Table, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, FollowingTable, FollowingPrimaryKey...),
 	)
 }
