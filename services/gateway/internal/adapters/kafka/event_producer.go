@@ -34,19 +34,13 @@ func NewEventProducer[T any](brokers []string, topic string, builder KafkaEventR
 	}, nil
 }
 
-// PublishEvent publishes an event to Kafka using the centralized builder.
-func (p *EventProducer[T]) PublishEvent(eventType string, payload T) error {
-	common.Logger().Debug("[EventProducer] Publishing event "+eventType+" to topic "+p.Topic, "event_type", eventType)
-
-	event, err := p.Builder(eventType, payload)
-	if err != nil {
-		common.Logger().Error("[EventProducer] Builder error", "event_type", eventType, "error", err)
-		return err
-	}
+// PublishEvent publishes a KafkaEventRequest directly to Kafka.
+func (p *EventProducer[T]) PublishEvent(event KafkaEventRequest[T]) error {
+	common.Logger().Debug("[EventProducer] Publishing event "+event.EventType+" to topic "+p.Topic, "event_type", event.EventType)
 
 	value, err := json.Marshal(event)
 	if err != nil {
-		common.Logger().Error("[EventProducer] Failed to marshal event "+eventType, "error", err)
+		common.Logger().Error("[EventProducer] Failed to marshal event "+event.EventType, "error", err)
 		return err
 	}
 
@@ -56,10 +50,10 @@ func (p *EventProducer[T]) PublishEvent(eventType string, payload T) error {
 	}
 	_, _, err = p.Producer.SendMessage(msg)
 	if err != nil {
-		common.Logger().Error("[EventProducer] Failed to publish event "+eventType, "error", err)
+		common.Logger().Error("[EventProducer] Failed to publish event "+event.EventType, "error", err)
 		return err
 	}
 
-	common.Logger().Debug("[EventProducer] Event " + eventType + " published")
+	common.Logger().Debug("[EventProducer] Event " + event.EventType + " published")
 	return nil
 }

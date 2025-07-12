@@ -22,9 +22,12 @@ func NewUnfollowUseCase(producer ports.EventProducerPort[kafka.UserPayload]) *Un
 
 // Execute handles unfollow logic.
 func (uc *UnfollowUseCase) Execute(ctx context.Context, followerID, followeeID int64) error {
-	request := kafka.KafkaFollowPayload{
-		FollowerID: followerID,
-		FolloweeID: followeeID,
+	event := kafka.KafkaEventRequest[kafka.UserPayload]{
+		EventType: "users.unfollow",
+		Payload: kafka.KafkaFollowPayload{
+			FollowerID: followerID,
+			FolloweeID: followeeID,
+		},
 	}
-	return uc.Producer.PublishEvent("users.unfollow", request)
+	return uc.Producer.PublishEvent(event)
 }

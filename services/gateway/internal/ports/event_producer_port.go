@@ -1,5 +1,7 @@
 package ports
 
+import "github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
+
 type EventProducerPort[T any] interface {
-	PublishEvent(eventType string, payload T) error
+	PublishEvent(event kafka.KafkaEventRequest[T]) error
 }

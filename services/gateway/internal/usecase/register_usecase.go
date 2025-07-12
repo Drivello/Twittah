@@ -22,10 +22,13 @@ func NewRegisterUserUseCase(producer ports.EventProducerPort[kafka.AuthPayload])
 
 // Execute handles user registration logic.
 func (uc *RegisterUserUseCase) Execute(ctx context.Context, username, email, password string) error {
-	event := kafka.KafkaUserCreatePayload{
-		Username: username,
-		Email:    email,
-		Password: password,
+	event := kafka.KafkaEventRequest[kafka.AuthPayload]{
+		EventType: "users.create",
+		Payload: kafka.KafkaUserCreatePayload{
+			Username: username,
+			Email:    email,
+			Password: password,
+		},
 	}
-	return uc.Producer.PublishEvent("users.create", event)
+	return uc.Producer.PublishEvent(event)
 }

@@ -22,9 +22,12 @@ func NewFollowUseCase(producer ports.EventProducerPort[kafka.UserPayload]) *Foll
 
 // FollowUser handles follow logic.
 func (uc *FollowUseCase) Execute(ctx context.Context, followerID, followeeID int64) error {
-	request := kafka.KafkaFollowPayload{
-		FollowerID: followerID,
-		FolloweeID: followeeID,
+	event := kafka.KafkaEventRequest[kafka.UserPayload]{
+		EventType: "users.follow",
+		Payload: kafka.KafkaFollowPayload{
+			FollowerID: followerID,
+			FolloweeID: followeeID,
+		},
 	}
-	return uc.Producer.PublishEvent("users.follow", request)
+	return uc.Producer.PublishEvent(event)
 }
