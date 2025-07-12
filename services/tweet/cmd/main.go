@@ -16,17 +16,16 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 	common.InitLogger(cfg.LogLevel)
-	logger := common.Logger()
-	defer logger.Sync()
+	defer common.Logger().Sync()
 
 	// Inicializar Ent (Postgres)
 	entClient, err := ent.Open("postgres", cfg.PostgresDSN)
 	if err != nil {
-		logger.Fatal("failed to connect to database", zap.Error(err))
+		common.Logger().Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer entClient.Close()
 	if err := entClient.Schema.Create(context.Background()); err != nil {
-		logger.Fatal("failed to run Ent migration", zap.Error(err))
+		common.Logger().Fatal("failed to run Ent migration", zap.Error(err))
 	}
 
 	// Inicializar Gin
@@ -36,8 +35,8 @@ func main() {
 
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	logger.Info("Tweet service started", zap.String("addr", cfg.Port))
+	common.Logger().Info("Tweet service started", zap.String("addr", cfg.Port))
 	if err := r.Run(cfg.Port); err != nil {
-		logger.Fatal("server failed", zap.Error(err))
+		common.Logger().Fatal("server failed", zap.Error(err))
 	}
 }

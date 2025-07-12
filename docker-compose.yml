@@ -208,22 +208,25 @@ services:
     build:
       context: ./services/tweet
     environment:
-      - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
-      - REDIS_ADDR=redis-tweet:6379
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_GROUP_ID=tweet-service-group
-      - SERVICE_PORT=8084
-      - TIMELINE_TTL_HOURS=24
-      - RETRY_MAX_DURATION=2h
-      - RETRY_MAX_BACKOFF=30s
-      - RETRY_INITIAL_BACKOFF=500ms
-      - RETRY_DLQ_TOPIC=tweets.dlq
-      - DLQ_WORKER_MAX_DURATION=1h
-      - DLQ_WORKER_MAX_BACKOFF=5m
-      - DLQ_WORKER_INITIAL_BACKOFF=5s
-      - DLQ_WORKER_SOURCE_TOPIC=tweets.dlq
-      - DLQ_WORKER_FINAL_DLQ_TOPIC=tweets.dlq.final
+      # --- Service ---
+      - TWEET_PORT=8084
       - LOG_LEVEL=debug
+
+      # --- Database ---
+      - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
+      - TWEET_REDIS_ADDR=redis-tweet:6379
+
+      # --- Kafka ---
+      - KAFKA_BROKERS=kafka:9092
+
+      # --- Kafka Tweet Consumer Config ---
+      - KAFKA_TWEET_CONSUMER_GROUP_NAME=tweet-service-group
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TWEET_DLQ_TOPIC=tweets.events.dlq
+      - KAFKA_TWEET_DLQ_TTL=168h
+      - KAFKA_TWEET_RETRY_MAX_DURATION=2h
+      - KAFKA_TWEET_RETRY_MAX_BACKOFF=300s
+      - KAFKA_TWEET_RETRY_INITIAL_BACKOFF=5s
     depends_on:
       postgres-tweet:
         condition: service_healthy
