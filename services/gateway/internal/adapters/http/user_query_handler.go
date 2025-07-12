@@ -10,11 +10,11 @@ import (
 // UserQueryHandler maneja las rutas de consulta de followers
 
 type UserQueryHandler struct {
-	UseCase ports.UserQueryPort
+	GetFollowersUseCase ports.GetFollowersUseCasePort
 }
 
-func NewUserQueryHandler(usecase ports.UserQueryPort) *UserQueryHandler {
-	return &UserQueryHandler{UseCase: usecase}
+func NewUserQueryHandler(getFollowersUseCase ports.GetFollowersUseCasePort) *UserQueryHandler {
+	return &UserQueryHandler{GetFollowersUseCase: getFollowersUseCase}
 }
 
 func (h *UserQueryHandler) RegisterRoutes(rg *gin.RouterGroup) {
@@ -27,7 +27,7 @@ func (h *UserQueryHandler) GetFollowers(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"followers": nil})
 		return
 	}
-	followers, err := h.UseCase.GetFollowers(c, userID)
+	followers, err := h.GetFollowersUseCase.Execute(c, userID)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"followers": nil})
 		return

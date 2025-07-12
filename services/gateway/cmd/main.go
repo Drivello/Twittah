@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gwhttp "github.com/Drivello/Twittah/services/gateway/internal/adapters/http"
+	adapters "github.com/Drivello/Twittah/services/gateway/internal/adapters"
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -33,9 +34,9 @@ func main() {
 		common.Logger().Fatal("failed to create kafka producers", zap.Error(err))
 	}
 
-	userQueryClient := gwhttp.NewUserQueryClient(cfg.UserMicroserviceURL)
-	userQueryUseCase := usecase.NewUserQueryUseCase(userQueryClient)
-	userQueryHandler := gwhttp.NewUserQueryHandler(userQueryUseCase)
+	userServiceAdapter := adapters.NewUserServiceHTTPAdapter(cfg.UserMicroserviceURL)
+	getFollowersUseCase := usecase.NewGetFollowersUseCase(userServiceAdapter)
+	userQueryHandler := gwhttp.NewUserQueryHandler(getFollowersUseCase)
 
 	registerUserUseCase := usecase.NewRegisterUserUseCase(authProducer)
 	followUseCase := usecase.NewFollowUseCase(userProducer)
