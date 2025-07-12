@@ -34,8 +34,8 @@ func main() {
 
 	// Event Usecases
 	createUserUC := usecase.NewCreateUserUseCase(repo)
-	followUC := usecase.NewFollowUserUseCase(repo, nil)
-	unfollowUC := usecase.NewUnfollowUserUseCase(repo, nil)
+	followUC := usecase.NewFollowUserUseCase(repo)
+	unfollowUC := usecase.NewUnfollowUserUseCase(repo)
 
 	// Read UseCases
 	getFollowersUC := usecase.NewGetFollowersUseCase(repo)

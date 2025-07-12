@@ -6,7 +6,9 @@ import (
 
 	"github.com/Drivello/Twittah/services/user/ent"
 	userEnt "github.com/Drivello/Twittah/services/user/ent/user"
+	"github.com/Drivello/Twittah/services/user/internal/common"
 	"github.com/Drivello/Twittah/services/user/internal/domain"
+	"go.uber.org/zap"
 )
 
 type EntUserRepository struct {
@@ -15,6 +17,7 @@ type EntUserRepository struct {
 
 // InsertUser inserts a user if not exists (id, username). Ignores duplicate key errors.
 func (r *EntUserRepository) InsertUser(ctx context.Context, user *domain.User) error {
+	common.Logger().Debug("[UserRepository] InsertUser", zap.Int64("user_id", user.ID), zap.String("username", user.Username))
 	// Verify if user exists
 	exists, err := r.client.User.
 		Query().
@@ -46,6 +49,7 @@ func NewEntUserRepository(client *ent.Client) *EntUserRepository {
 }
 
 func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followeeID int64) error {
+	common.Logger().Debug("[UserRepository] FollowUser", zap.Int64("follower_id", followerID), zap.Int64("followee_id", followeeID))
 	if followerID == followeeID {
 		return fmt.Errorf("cannot follow yourself")
 	}
@@ -62,6 +66,7 @@ func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followee
 }
 
 func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, followeeID int64) error {
+	common.Logger().Debug("[UserRepository] UnfollowUser", zap.Int64("follower_id", followerID), zap.Int64("followee_id", followeeID))
 	if followerID == followeeID {
 		return fmt.Errorf("cannot unfollow yourself")
 	}
@@ -76,6 +81,7 @@ func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, follow
 }
 
 func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]int64, error) {
+	common.Logger().Debug("[UserRepository] GetFollowers", zap.Int64("user_id", userID))
 	followers, err := r.client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
