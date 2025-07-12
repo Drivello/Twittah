@@ -14,7 +14,7 @@ type GatewayConfig struct {
 	Port                string
 	KafkaBrokers        []string
 	KafkaAuthTopic      string
-	KafkaFollowTopic    string
+	KafkaUserTopic      string
 	KafkaTweetTopic     string
 	LogLevel            string
 	UserMicroserviceURL string
@@ -33,9 +33,9 @@ func LoadConfig() (*GatewayConfig, error) {
 	}
 	brokers := strings.Split(brokersStr, ",")
 
-	followTopic := os.Getenv("KAFKA_FOLLOWS_TOPIC")
-	if followTopic == "" {
-		return nil, fmt.Errorf("KAFKA_FOLLOWS_TOPIC env var required")
+	userTopic := os.Getenv("KAFKA_USER_TOPIC")
+	if userTopic == "" {
+		return nil, fmt.Errorf("KAFKA_USER_TOPIC env var required")
 	}
 	authTopic := os.Getenv("KAFKA_AUTH_TOPIC")
 	if authTopic == "" {
@@ -58,28 +58,51 @@ func LoadConfig() (*GatewayConfig, error) {
 		Port:                port,
 		KafkaBrokers:        brokers,
 		KafkaAuthTopic:      authTopic,
-		KafkaFollowTopic:    followTopic,
+		KafkaUserTopic:      userTopic,
 		KafkaTweetTopic:     tweetTopic,
 		LogLevel:            logLevel,
 		UserMicroserviceURL: userMicroserviceURL,
 	}, nil
 }
 
-func InitKafkaProducers(cfg *GatewayConfig) (*kafka.AuthProducer, *kafka.UserEventProducer, *kafka.TweetEventProducer, error) {
-	authProducer, err := kafka.NewAuthProducer(cfg.KafkaBrokers, cfg.KafkaAuthTopic)
+func InitKafkaProducers(cfg *GatewayConfig) (
+	*kafka.EventProducer[kafka.AuthPayload],
+	*kafka.EventProducer[kafka.UserPayload],
+	*kafka.EventProducer[kafka.TweetPayload],
+	error,
+) {
+	// Auth producer solo soporta KafkaUserCreatePayload
+	authProducer, err := kafka.NewEventProducer[kafka.AuthPayload](
+		cfg.KafkaBrokers,
+		cfg.KafkaAuthTopic,
+		kafka.AuthEventRequestBuilder,
+	)
 	if err != nil {
 		common.Logger().Errorw("Failed to create auth kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
-	userProducer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaFollowTopic)
+
+	// User producer soporta KafkaUserCreatedPayload y KafkaFollowPayload
+	userProducer, err := kafka.NewEventProducer[kafka.UserPayload](
+		cfg.KafkaBrokers,
+		cfg.KafkaUserTopic,
+		kafka.UserEventRequestBuilder,
+	)
 	if err != nil {
 		common.Logger().Errorw("Failed to create user kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
-	tweetProducer, err := kafka.NewTweetEventProducer(cfg.KafkaBrokers, cfg.KafkaTweetTopic)
+
+	// Tweet producer solo soporta KafkaTweetCreatePayload
+	tweetProducer, err := kafka.NewEventProducer[kafka.TweetPayload](
+		cfg.KafkaBrokers,
+		cfg.KafkaTweetTopic,
+		kafka.TweetEventRequestBuilder,
+	)
 	if err != nil {
 		common.Logger().Errorw("Failed to create tweet kafka producer", "error", err)
 		return nil, nil, nil, err
 	}
+
 	return authProducer, userProducer, tweetProducer, nil
 }

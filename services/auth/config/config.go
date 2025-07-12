@@ -1,120 +1,64 @@
 package config
 
 import (
-	"os"
+	"strings"
 	"time"
-
-	"github.com/Drivello/Twittah/services/auth/internal/common"
-	"go.uber.org/zap"
 )
 
-// RetryConfig holds configuration for retry logic in Kafka consumers.
-type RetryConfig struct {
-	MaxRetryDuration time.Duration
-	MaxBackoff       time.Duration
-	InitialBackoff   time.Duration
-	DLQTopic         string
-}
-
-// DLQWorkerConfig holds configuration for the DLQ worker retry and topics.
-type DLQWorkerConfig struct {
-	MaxRetryDuration time.Duration
-	MaxBackoff       time.Duration
-	InitialBackoff   time.Duration
-	SourceTopic      string
-	DLQMessageTTL    time.Duration // TTL para mensajes de la DLQ
-}
-
-// Config holds all environment configuration for the Auth service.
 type Config struct {
-	Port                          string
-	KafkaBrokers                  []string
-	DatabaseURL                   string
-	KafkaUserEventsTopic          string
-	UserCreatedEventType          string
-	KafkaAuthConsumerGroupName    string
-	KafkaAuthDLQConsumerGroupName string
-	Retry                         RetryConfig
-	DLQWorker                     DLQWorkerConfig
+	// Service
+	Port     string
+	LogLevel string
+
+	// Database
+	PostgresDSN string
+
+	// Kafka
+	KafkaBrokers   []string
+	KafkaUserTopic string
+
+	// Kafka Auth Consumer
+	KafkaUserConsumerConfig ConsumerConfig
 }
 
-// getEnvAsDuration parses an environment variable as a time.Duration or returns the default.
-func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if valStr := os.Getenv(key); valStr != "" {
-		val, err := time.ParseDuration(valStr)
-		if err != nil {
-			common.Logger().Error("Invalid duration for %s: %s, using default %v", zap.String("key", key), zap.String("value", valStr), zap.Duration("default", defaultVal))
-			return defaultVal
-		}
-		return val
-	}
-	return defaultVal
-}
-
-// LoadConfig loads configuration from environment variables and returns a Config struct.
+// LoadConfig loads configuration from environment variables or .env file.
 func LoadConfig() *Config {
-	port := os.Getenv("AUTH_PORT")
-	brokers := os.Getenv("KAFKA_BROKERS")
-	databaseURL := os.Getenv("AUTH_POSTGRES_DSN")
-	kafkaUserEventsTopic := os.Getenv("KAFKA_USER_TOPIC")
-	userCreatedEventType := os.Getenv("USER_CREATED_EVENT_TYPE")
-	kafkaAuthConsumerGroupName := os.Getenv("KAFKA_AUTH_CONSUMER_GROUP_NAME")
-	kafkaAuthDLQConsumerGroupName := os.Getenv("KAFKA_AUTH_DLQ_CONSUMER_GROUP_NAME")
-	if userCreatedEventType == "" {
-		userCreatedEventType = "user_created_to_replicate"
-	}
-	if port == "" {
-		common.Logger().Fatal("AUTH_PORT env var required")
-	}
-	if brokers == "" {
-		common.Logger().Fatal("KAFKA_BROKERS env var required")
-	}
-	if databaseURL == "" {
-		common.Logger().Fatal("AUTH_POSTGRES_DSN env var required")
-	}
-	if kafkaUserEventsTopic == "" {
-		common.Logger().Fatal("KAFKA_USER_TOPIC env var required")
-	}
-	if kafkaAuthConsumerGroupName == "" {
-		common.Logger().Fatal("KAFKA_AUTH_CONSUMER_GROUP_NAME env var required")
-	}
-	if kafkaAuthDLQConsumerGroupName == "" {
-		common.Logger().Fatal("KAFKA_AUTH_DLQ_CONSUMER_GROUP_NAME env var required")
-	}
-	if kafkaUserEventsTopic == "" {
-		common.Logger().Fatal("KAFKA_USER_TOPIC env var required")
-	}
-	if kafkaAuthConsumerGroupName == "" {
-		common.Logger().Fatal("KAFKA_AUTH_DLQ_CONSUMER_GROUP_NAME env var required")
-	}
+	// Service
+	port := mustGetEnv("AUTH_PORT")
+	logLevel := getEnvOrDefault("LOG_LEVEL", "info")
 
-	if kafkaAuthDLQConsumerGroupName == "" {
-		common.Logger().Fatal("KAFKA_AUTH_DLQ_CONSUMER_GROUP_NAME env var required")
-	}
+	// Database
+	postgresDSN := mustGetEnv("AUTH_POSTGRES_DSN")
 
-	retryCfg := RetryConfig{
-		MaxRetryDuration: getEnvAsDuration("RETRY_MAX_DURATION", 0),
-		MaxBackoff:       getEnvAsDuration("RETRY_MAX_BACKOFF", 0),
-		InitialBackoff:   getEnvAsDuration("RETRY_INITIAL_BACKOFF", 0),
-		DLQTopic:         os.Getenv("RETRY_DLQ_TOPIC"),
-	}
-	dlqWorkerCfg := DLQWorkerConfig{
-		MaxRetryDuration: getEnvAsDuration("DLQ_WORKER_MAX_DURATION", 0),
-		MaxBackoff:       getEnvAsDuration("DLQ_WORKER_MAX_BACKOFF", 0),
-		InitialBackoff:   getEnvAsDuration("DLQ_WORKER_INITIAL_BACKOFF", 0),
-		SourceTopic:      os.Getenv("RETRY_DLQ_TOPIC"),
-		DLQMessageTTL:    getEnvAsDuration("DLQ_WORKER_MESSAGE_TTL", 0),
+	// Kafka
+	brokersStr := mustGetEnv("KAFKA_BROKERS")
+	brokers := strings.Split(brokersStr, ",")
+	userTopic := mustGetEnv("KAFKA_USER_TOPIC")
+
+	// Kafka Auth Consumer Config
+	authConsumerConfig := ConsumerConfig{
+		Group:    mustGetEnv("KAFKA_AUTH_CONSUMER_GROUP_NAME"),
+		Topic:    mustGetEnv("KAFKA_AUTH_TOPIC"),
+		DLQTopic: mustGetEnv("KAFKA_AUTH_DLQ_TOPIC"),
+		TTL:      getEnvAsDuration("KAFKA_AUTH_DLQ_TTL", 168*time.Hour),
+		RetryConfig: RetryConfig{
+			MaxRetryDuration: getEnvAsDuration("KAFKA_AUTH_RETRY_MAX_DURATION", 2*time.Hour),
+			MaxBackoff:       getEnvAsDuration("KAFKA_AUTH_RETRY_MAX_BACKOFF", 300*time.Second),
+			InitialBackoff:   getEnvAsDuration("KAFKA_AUTH_RETRY_INITIAL_BACKOFF", 5*time.Second),
+		},
+		DLQConfig: DLQConfig{
+			DLQTopic:    mustGetEnv("KAFKA_AUTH_DLQ_TOPIC"),
+			SourceTopic: mustGetEnv("KAFKA_USER_TOPIC"),
+			TTL:         getEnvAsDuration("KAFKA_AUTH_DLQ_TTL", 168*time.Hour),
+		},
 	}
 
 	return &Config{
-		Port:                          port,
-		KafkaBrokers:                  []string{brokers},
-		DatabaseURL:                   databaseURL,
-		KafkaUserEventsTopic:          kafkaUserEventsTopic,
-		UserCreatedEventType:          userCreatedEventType,
-		KafkaAuthConsumerGroupName:    kafkaAuthConsumerGroupName,
-		KafkaAuthDLQConsumerGroupName: kafkaAuthDLQConsumerGroupName,
-		Retry:                         retryCfg,
-		DLQWorker:                     dlqWorkerCfg,
+		Port:                    port,
+		LogLevel:                logLevel,
+		PostgresDSN:             postgresDSN,
+		KafkaBrokers:            brokers,
+		KafkaUserTopic:          userTopic,
+		KafkaUserConsumerConfig: authConsumerConfig,
 	}
 }

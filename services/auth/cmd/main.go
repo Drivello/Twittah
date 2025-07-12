@@ -35,19 +35,27 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Kafka producer
-	producer, err := kafka.NewUserEventProducer(cfg.KafkaBrokers, cfg.KafkaUserEventsTopic)
+	authProducer, err := kafka.NewEventProducer(cfg.KafkaBrokers, cfg.KafkaUserConsumerConfig.Topic)
+	if err != nil {
+		logger.Fatal("Failed to create Kafka producer", zap.Error(err))
+	}
+	userProducer, err := kafka.NewEventProducer(cfg.KafkaBrokers, cfg.KafkaUserTopic)
 	if err != nil {
 		logger.Fatal("Failed to create Kafka producer", zap.Error(err))
 	}
 
 	// Database connection
-	entClient, err := ent.Open("postgres", cfg.DatabaseURL)
+	entClient, err := ent.Open("postgres", cfg.PostgresDSN)
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
+	// Migración automática Ent
+	if err := entClient.Schema.Create(context.Background()); err != nil {
+		logger.Fatal("Failed to run Ent migration", zap.Error(err))
+	}
 
 	repo := postgres.NewPostgresUserRepository(entClient)
-	userUC := usecase.NewAuthUseCasesPort(repo, producer, cfg.UserCreatedEventType)
+	authUC := usecase.NewRegisterUserUseCase(repo, userProducer)
 
 	// Create cancelable context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -57,12 +65,12 @@ func main() {
 	workerCount, queueSize := common.CalculateWorkerConfig(true)
 	workQueue := common.NewWorkQueue(workerCount, queueSize)
 
-	// Start Kafka consumers with cancelable context
-	go kafka.StartKafkaConsumers(ctx, cfg, repo, userUC, producer.Producer, workQueue)
+	// Start Kafka Auth consumers with cancelable context
+	go kafka.StartKafkaConsumers(ctx, cfg, repo, authUC, authProducer, workQueue)
 
 	// Setup Gin HTTP server
 	r := gin.Default()
-	handler := authhttp.NewAuthHandler(userUC)
+	handler := authhttp.NewAuthHandler(authUC)
 	healthHandler := authhttp.NewHealthHandler(cfg, entClient)
 	handler.RegisterRoutes(r)
 	healthHandler.RegisterRoutes(r)
@@ -105,7 +113,7 @@ func main() {
 	}
 
 	// Close Kafka producer
-	kafka.CloseKafka(producer.Producer)
+	kafka.CloseKafka(userProducer.Producer)
 
 	logger.Info("AuthService exited cleanly")
 }

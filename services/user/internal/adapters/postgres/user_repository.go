@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"github.com/Drivello/Twittah/services/user/ent"
-	"github.com/Drivello/Twittah/services/user/ent/user"
+	userEnt "github.com/Drivello/Twittah/services/user/ent/user"
+	"github.com/Drivello/Twittah/services/user/internal/domain"
 )
 
 type EntUserRepository struct {
@@ -13,11 +14,11 @@ type EntUserRepository struct {
 }
 
 // InsertUser inserts a user if not exists (id, username). Ignores duplicate key errors.
-func (r *EntUserRepository) InsertUser(ctx context.Context, id, username string) error {
+func (r *EntUserRepository) InsertUser(ctx context.Context, user *domain.User) error {
 	// Verify if user exists
 	exists, err := r.client.User.
 		Query().
-		Where(user.IDEQ(id)).
+		Where(userEnt.IDEQ(user.ID)).
 		Exist(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to check if user exists: %w", err)
@@ -31,8 +32,8 @@ func (r *EntUserRepository) InsertUser(ctx context.Context, id, username string)
 	// Create new user
 	_, err = r.client.User.
 		Create().
-		SetID(id).
-		SetUsername(username).
+		SetID(user.ID).
+		SetUsername(user.Username).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
@@ -44,7 +45,7 @@ func NewEntUserRepository(client *ent.Client) *EntUserRepository {
 	return &EntUserRepository{client: client}
 }
 
-func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followeeID string) error {
+func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followeeID int64) error {
 	if followerID == followeeID {
 		return fmt.Errorf("cannot follow yourself")
 	}
@@ -60,7 +61,7 @@ func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followee
 	return nil
 }
 
-func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, followeeID string) error {
+func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, followeeID int64) error {
 	if followerID == followeeID {
 		return fmt.Errorf("cannot unfollow yourself")
 	}
@@ -74,40 +75,40 @@ func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, follow
 	return nil
 }
 
-func (r *EntUserRepository) GetFollowers(ctx context.Context, userID string) ([]string, error) {
+func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]int64, error) {
 	followers, err := r.client.User.
 		Query().
-		Where(user.IDEQ(userID)).
+		Where(userEnt.IDEQ(userID)).
 		QueryFollowers().
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get followers: %w", err)
 	}
-	ids := make([]string, len(followers))
+	ids := make([]int64, len(followers))
 	for i, f := range followers {
 		ids[i] = f.ID
 	}
 	return ids, nil
 }
 
-func (r *EntUserRepository) GetFollowing(ctx context.Context, userID string) ([]string, error) {
+func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]int64, error) {
 	following, err := r.client.User.
 		Query().
-		Where(user.IDEQ(userID)).
+		Where(userEnt.IDEQ(userID)).
 		QueryFollowing().
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get following: %w", err)
 	}
-	ids := make([]string, len(following))
+	ids := make([]int64, len(following))
 	for i, f := range following {
 		ids[i] = f.ID
 	}
 	return ids, nil
 }
 
-func (r *EntUserRepository) Exists(ctx context.Context, userID string) (bool, error) {
-	exists, err := r.client.User.Query().Where(user.IDEQ(userID)).Exist(ctx)
+func (r *EntUserRepository) Exists(ctx context.Context, userID int64) (bool, error) {
+	exists, err := r.client.User.Query().Where(userEnt.IDEQ(userID)).Exist(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user existence: %w", err)
 	}

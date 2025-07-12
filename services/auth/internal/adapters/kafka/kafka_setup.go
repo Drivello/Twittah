@@ -18,23 +18,20 @@ var (
 	dlqConsumerGroup  sarama.ConsumerGroup
 )
 
-func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.AuthRepositoryPort, authUC ports.AuthUseCasesPort, producer sarama.SyncProducer, workQueue *common.WorkQueue) {
+func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.AuthRepositoryPort, registerUserUC ports.RegisterUserUseCasesPort, producer ports.EventProducerPort, workQueue *common.WorkQueue) {
 	common.Logger().Debug("[KafkaSetup] Entrando a StartKafkaConsumers")
-	authConsumer := NewAuthConsumer(producer, cfg.Retry, workQueue, authUC)
-	dlqWorker := &DLQWorker{
-		AuthUC:   authUC,
-		Producer: producer,
-		Config:   cfg.DLQWorker,
-	}
+
+	authConsumer := NewAuthConsumer(producer, cfg.KafkaUserConsumerConfig, workQueue, registerUserUC)
+	authDLQWorker := NewDLQWorker(producer, registerUserUC, cfg.KafkaUserConsumerConfig)
 
 	// User consumer goroutine
 	go func() {
-		group, err := sarama.NewConsumerGroup(cfg.KafkaBrokers, cfg.KafkaAuthConsumerGroupName, nil)
+		group, err := sarama.NewConsumerGroup(cfg.KafkaBrokers, cfg.KafkaUserConsumerConfig.Group, nil)
 		if err != nil {
 			common.Logger().Fatal("[KafkaSetup] Failed to create Kafka consumer group", zap.Error(err))
 		}
 		authConsumerGroup = group
-		common.Logger().Info("[KafkaSetup] Starting " + cfg.KafkaUserEventsTopic + " consumer group")
+		common.Logger().Info("[KafkaSetup] Starting " + cfg.KafkaUserConsumerConfig.Topic + " consumer group")
 
 		for {
 			select {
@@ -43,8 +40,8 @@ func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.Aut
 				return
 			default:
 				err := group.Consume(
-					ctx, // 		Ahora usa el contexto cancelable
-					[]string{cfg.KafkaUserEventsTopic},
+					ctx,
+					[]string{cfg.KafkaUserConsumerConfig.Topic},
 					authConsumer,
 				)
 				if err != nil {
@@ -60,12 +57,12 @@ func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.Aut
 
 	// DLQ worker goroutine
 	go func() {
-		group, err := sarama.NewConsumerGroup(cfg.KafkaBrokers, cfg.KafkaAuthDLQConsumerGroupName, nil)
+		group, err := sarama.NewConsumerGroup(cfg.KafkaBrokers, cfg.KafkaUserConsumerConfig.Group+"-dlq", nil)
 		if err != nil {
 			common.Logger().Fatal("[KafkaSetup] Failed to create DLQ Kafka consumer group", zap.Error(err))
 		}
 		dlqConsumerGroup = group
-		common.Logger().Info("[KafkaSetup] Starting DLQ worker consumer group")
+		common.Logger().Info("[KafkaSetup] Starting DLQ worker " + cfg.KafkaUserConsumerConfig.DLQTopic + " consumer group")
 
 		for {
 			select {
@@ -74,9 +71,9 @@ func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.Aut
 				return
 			default:
 				err := group.Consume(
-					ctx, // También aquí
-					[]string{cfg.DLQWorker.SourceTopic},
-					dlqWorker,
+					ctx,
+					[]string{cfg.KafkaUserConsumerConfig.DLQTopic},
+					authDLQWorker,
 				)
 				if err != nil {
 					if err == context.Canceled {
@@ -88,7 +85,6 @@ func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.Aut
 			}
 		}
 	}()
-
 }
 
 // CloseKafka closes Kafka producer and consumers gracefully.

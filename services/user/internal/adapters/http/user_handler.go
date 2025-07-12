@@ -1,34 +1,21 @@
 package http
 
 import (
-	"context"
+	"strconv"
 
 	"github.com/Drivello/Twittah/services/user/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	FollowUseCase   *usecase.FollowUserUseCase
-	UnfollowUseCase *usecase.UnfollowUserUseCase
+	GetFollowersUseCase *usecase.GetFollowersUseCase
+	GetFollowingUseCase *usecase.GetFollowingUseCase
 }
 
-func (h *UserHandler) repo() interface {
-	GetFollowers(ctx context.Context, userID string) ([]string, error)
-	GetFollowing(ctx context.Context, userID string) ([]string, error)
-} {
-	if h.FollowUseCase != nil && h.FollowUseCase.Repo != nil {
-		return h.FollowUseCase.Repo
-	}
-	if h.UnfollowUseCase != nil && h.UnfollowUseCase.Repo != nil {
-		return h.UnfollowUseCase.Repo
-	}
-	return nil
-}
-
-func NewUserHandler(followUC *usecase.FollowUserUseCase, unfollowUC *usecase.UnfollowUserUseCase) *UserHandler {
+func NewUserHandler(getFollowersUC *usecase.GetFollowersUseCase, getFollowingUC *usecase.GetFollowingUseCase) *UserHandler {
 	return &UserHandler{
-		FollowUseCase:   followUC,
-		UnfollowUseCase: unfollowUC,
+		GetFollowersUseCase: getFollowersUC,
+		GetFollowingUseCase: getFollowingUC,
 	}
 }
 
@@ -38,13 +25,13 @@ func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
 }
 
 func (h *UserHandler) GetFollowers(c *gin.Context) {
-	repo := h.repo()
-	if repo == nil {
-		c.JSON(500, gin.H{"error": "repository not available"})
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid user_id"})
 		return
 	}
-	userID := c.Param("user_id")
-	followers, err := repo.GetFollowers(c.Request.Context(), userID)
+	followers, err := h.GetFollowersUseCase.Execute(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -54,13 +41,13 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 }
 
 func (h *UserHandler) GetFollowing(c *gin.Context) {
-	repo := h.repo()
-	if repo == nil {
-		c.JSON(500, gin.H{"error": "repository not available"})
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid user_id"})
 		return
 	}
-	userID := c.Param("user_id")
-	following, err := repo.GetFollowing(c.Request.Context(), userID)
+	following, err := h.GetFollowingUseCase.Execute(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

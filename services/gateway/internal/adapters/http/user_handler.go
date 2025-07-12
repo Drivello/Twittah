@@ -1,20 +1,23 @@
 package http
 
 import (
-	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
+	"strconv"
+
+	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
 
 // UserHandler handles user HTTP endpoints.
 type UserHandler struct {
-	UserUseCase *usecase.UserUseCase
+	FollowUseCase   ports.FollowUserUseCasePort
+	UnfollowUseCase ports.UnfollowUserUseCasePort
 }
 
 // NewUserHandler creates a new UserHandler.
 // useCase: Use case for user operations.
 // Returns a pointer to UserHandler.
-func NewUserHandler(useCase *usecase.UserUseCase) *UserHandler {
-	return &UserHandler{UserUseCase: useCase}
+func NewUserHandler(followUC ports.FollowUserUseCasePort, unfollowUC ports.UnfollowUserUseCasePort) *UserHandler {
+	return &UserHandler{FollowUseCase: followUC, UnfollowUseCase: unfollowUC}
 }
 
 // RegisterRoutes registers follow/unfollow endpoints on the given Gin router group.
@@ -30,14 +33,24 @@ func (h *UserHandler) FollowUser(c *gin.Context) {
 	followerID := c.GetHeader("X-User-Id")
 	followeeID := c.Param("target_user_id")
 	if followerID == "" || followeeID == "" {
-		c.JSON(400, FollowResponseDTO{Message: "Missing user IDs"})
+		WriteGenericError(c, 400)
 		return
 	}
-	if err := h.UserUseCase.FollowUser(c, followerID, followeeID); err != nil {
-		c.JSON(500, FollowResponseDTO{Message: "No se pudo seguir al usuario"})
+	followerIDInt, err := strconv.ParseInt(followerID, 10, 64)
+	if err != nil {
+		WriteGenericError(c, 400)
 		return
 	}
-	c.JSON(200, FollowResponseDTO{Message: "Ahora sigues al usuario"})
+	followeeIDInt, err := strconv.ParseInt(followeeID, 10, 64)
+	if err != nil {
+		WriteGenericError(c, 400)
+		return
+	}
+	if err := h.FollowUseCase.Execute(c, followerIDInt, followeeIDInt); err != nil {
+		WriteGenericError(c, 500)
+		return
+	}
+	c.JSON(200, GenericResponse{Message: "Ahora sigues al usuario"})
 }
 
 // UnfollowUser handles unfollow requests.
@@ -46,12 +59,22 @@ func (h *UserHandler) UnfollowUser(c *gin.Context) {
 	followerID := c.GetHeader("X-User-Id")
 	followeeID := c.Param("target_user_id")
 	if followerID == "" || followeeID == "" {
-		c.JSON(400, FollowResponseDTO{Message: "Missing user IDs"})
+		WriteGenericError(c, 400)
 		return
 	}
-	if err := h.UserUseCase.UnfollowUser(c, followerID, followeeID); err != nil {
-		c.JSON(500, FollowResponseDTO{Message: "No se pudo dejar de seguir al usuario"})
+	followerIDInt, err := strconv.ParseInt(followerID, 10, 64)
+	if err != nil {
+		WriteGenericError(c, 400)
 		return
 	}
-	c.JSON(200, FollowResponseDTO{Message: "Has dejado de seguir al usuario"})
+	followeeIDInt, err := strconv.ParseInt(followeeID, 10, 64)
+	if err != nil {
+		WriteGenericError(c, 400)
+		return
+	}
+	if err := h.UnfollowUseCase.Execute(c, followerIDInt, followeeIDInt); err != nil {
+		WriteGenericError(c, 500)
+		return
+	}
+	c.JSON(200, GenericResponse{Message: "Has dejado de seguir al usuario"})
 }

@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Drivello/Twittah/services/user/internal/ports"
 )
@@ -19,7 +20,7 @@ func NewFollowUserUseCase(repo ports.UserRepository, events ports.UserEventPubli
 }
 
 // Execute performs the follow operation and publishes the event.
-func (uc *FollowUserUseCase) Execute(ctx context.Context, followerID, followeeID string) error {
+func (uc *FollowUserUseCase) Execute(ctx context.Context, followerID, followeeID int64) error {
 	if followerID == followeeID {
 		return errors.New("cannot follow yourself")
 	}
@@ -28,7 +29,7 @@ func (uc *FollowUserUseCase) Execute(ctx context.Context, followerID, followeeID
 		return err
 	}
 	// Publish event (fire and forget, but log error)
-	if pubErr := uc.Events.PublishFollow(followerID, followeeID); pubErr != nil {
+	if pubErr := uc.Events.PublishFollow(fmt.Sprint(followerID), fmt.Sprint(followeeID)); pubErr != nil {
 		// TODO: Connect with timeline
 		// Log error if needed, or ignore for now
 	}

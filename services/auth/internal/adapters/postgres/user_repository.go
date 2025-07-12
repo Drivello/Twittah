@@ -9,6 +9,7 @@ import (
 	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type PostgresUserRepository struct {
@@ -26,6 +27,14 @@ func (r *PostgresUserRepository) CreateOrGetUser(ctx context.Context, user domai
 	if user.Username == "" || user.Email == "" || !domain.IsValidEmail(user.Email) || user.Password == "" {
 		return 0, false, domain.ErrInvalidPayload
 	}
+
+	// Hash de la contraseña
+	hashed, err := hashPassword(user.Password)
+	if err != nil {
+		common.Logger().Error("[AuthUseCase] Failed to hash password", zap.Error(err))
+		return 0, false, err
+	}
+	user.Password = hashed
 
 	createdUser, err := r.Client.User.
 		Create().
@@ -56,4 +65,12 @@ func (r *PostgresUserRepository) CreateOrGetUser(ctx context.Context, user domai
 
 	common.Logger().Error("[UserRepo] Failed to create user", zap.Error(err))
 	return 0, false, err
+}
+
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }

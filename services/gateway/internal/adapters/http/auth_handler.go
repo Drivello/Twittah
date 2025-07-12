@@ -1,22 +1,21 @@
 package http
 
 import (
-	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
+	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler handles authentication HTTP endpoints.
 type AuthHandler struct {
-	Kafka KafkaTopicLister // Interfaz que exponga Topics() ([]string, error)
-
-	UserUseCase *usecase.AuthUseCase
+	Kafka               KafkaTopicLister // Interfaz que exponga Topics() ([]string, error)
+	registerUserUseCase ports.RegisterUserUseCasePort
 }
 
 // NewAuthHandler creates a new AuthHandler.
 // producer: Kafka producer for user events.
 // Returns a pointer to AuthHandler.
-func NewAuthHandler(useCase *usecase.AuthUseCase) *AuthHandler {
-	return &AuthHandler{UserUseCase: useCase}
+func NewAuthHandler(registerUserUseCase ports.RegisterUserUseCasePort) *AuthHandler {
+	return &AuthHandler{registerUserUseCase: registerUserUseCase}
 }
 
 // RegisterRoutes registers auth endpoints on the given Gin router group.
@@ -29,15 +28,15 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 func (h *AuthHandler) RegisterUser(c *gin.Context) {
 	var reqDTO RegisterUserRequestDTO
 	if err := c.ShouldBindJSON(&reqDTO); err != nil {
-		c.JSON(400, RegisterUserResponseDTO{Message: "Invalid request"})
+		WriteGenericError(c, 400)
 		return
 	}
 	if reqDTO.Username == "" || reqDTO.Email == "" || reqDTO.Password == "" {
-		c.JSON(400, RegisterUserResponseDTO{Message: "Missing required fields"})
+		WriteGenericError(c, 400)
 		return
 	}
-	if err := h.UserUseCase.RegisterUser(c, reqDTO.Username, reqDTO.Email, reqDTO.Password); err != nil {
-		c.JSON(500, RegisterUserResponseDTO{Message: "No se pudo registrar el usuario"})
+	if err := h.registerUserUseCase.Execute(c, reqDTO.Username, reqDTO.Email, reqDTO.Password); err != nil {
+		WriteGenericError(c, 500)
 		return
 	}
 	resp := RegisterUserResponseDTO{Message: "Usuario registrado", Username: reqDTO.Username}

@@ -1,5 +1,5 @@
 package ports
 
-type UserEventProducerPort interface {
-	PublishUserCreated(id int64, username string, eventType string) error
+type EventProducerPort interface {
+	PublishEvent(eventType string, payload interface{}) error
 }

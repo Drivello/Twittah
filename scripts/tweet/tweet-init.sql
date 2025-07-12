@@ -8,13 +8,3 @@ BEGIN
     END IF;
 END
 $$;
-
-\connect tweet
-
--- 02-create-tweets-table.sql
-CREATE TABLE IF NOT EXISTS tweets (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);

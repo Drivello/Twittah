@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Drivello/Twittah/services/user/internal/ports"
 )
@@ -19,7 +20,7 @@ func NewUnfollowUserUseCase(repo ports.UserRepository, events ports.UserEventPub
 }
 
 // Execute performs the unfollow operation and publishes the event.
-func (uc *UnfollowUserUseCase) Execute(ctx context.Context, followerID, followeeID string) error {
+func (uc *UnfollowUserUseCase) Execute(ctx context.Context, followerID, followeeID int64) error {
 	if followerID == followeeID {
 		return errors.New("cannot unfollow yourself")
 	}
@@ -28,7 +29,7 @@ func (uc *UnfollowUserUseCase) Execute(ctx context.Context, followerID, followee
 		return err
 	}
 	// Publish event (fire and forget, but log error)
-	if pubErr := uc.Events.PublishUnfollow(followerID, followeeID); pubErr != nil {
+	if pubErr := uc.Events.PublishUnfollow(fmt.Sprint(followerID), fmt.Sprint(followeeID)); pubErr != nil {
 		// TODO: Connect with timeline
 		// Log error if needed, or ignore for now
 	}

@@ -7,11 +7,11 @@ import (
 
 // AuthHandler handles HTTP requests for authentication-related endpoints.
 type AuthHandler struct {
-	UserUC ports.AuthUseCasesPort
+	UserUC ports.RegisterUserUseCasesPort
 }
 
 // NewAuthHandler creates a new AuthHandler instance con inyección de usecase.
-func NewAuthHandler(userUC ports.AuthUseCasesPort) *AuthHandler {
+func NewAuthHandler(userUC ports.RegisterUserUseCasesPort) *AuthHandler {
 	return &AuthHandler{UserUC: userUC}
 }
 

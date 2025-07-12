@@ -3,7 +3,7 @@ package http
 // TweetRequestDTO representa el request para publicar un tweet via HTTP
 // Usado solo por el handler de tweets
 type TweetRequestDTO struct {
-	AuthorID string `json:"author_id" binding:"required"`
+	AuthorID int64  `json:"author_id" binding:"required"`
 	Content  string `json:"content" binding:"required"`
 }
 

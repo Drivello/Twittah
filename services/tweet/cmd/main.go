@@ -41,6 +41,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer entClient.Close()
+	// Migración automática Ent
+	if err := entClient.Schema.Create(context.Background()); err != nil {
+		logger.Sugar().Fatalw("failed to run Ent migration", "error", err)
+		os.Exit(1)
+	}
 	repo := postgres.NewEntTweetRepository(entClient)
 
 	// Wire Redis client

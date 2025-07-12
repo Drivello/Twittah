@@ -37,13 +37,14 @@ func main() {
 	userQueryUseCase := usecase.NewUserQueryUseCase(userQueryClient)
 	userQueryHandler := gwhttp.NewUserQueryHandler(userQueryUseCase)
 
-	authUseCase := usecase.NewAuthUseCase(authProducer)
-	userUseCase := usecase.NewUserUseCase(userProducer)
-	tweetUsecase := usecase.NewTweetUsecase(tweetProducer)
+	registerUserUseCase := usecase.NewRegisterUserUseCase(authProducer)
+	followUseCase := usecase.NewFollowUseCase(userProducer)
+	unfollowUseCase := usecase.NewUnfollowUseCase(userProducer)
+	createTweetUseCase := usecase.NewCreateTweetUseCase(tweetProducer)
 
-	authHandler := gwhttp.NewAuthHandler(authUseCase)
-	userHandler := gwhttp.NewUserHandler(userUseCase)
-	tweetHandler := gwhttp.NewTweetHandler(tweetUsecase)
+	authHandler := gwhttp.NewAuthHandler(registerUserUseCase)
+	userHandler := gwhttp.NewUserHandler(followUseCase, unfollowUseCase)
+	tweetHandler := gwhttp.NewTweetHandler(createTweetUseCase)
 
 	r := gin.Default()
 	userQueryHandler.RegisterRoutes(r.Group("/api"))

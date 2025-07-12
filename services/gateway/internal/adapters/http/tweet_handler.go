@@ -1,21 +1,21 @@
 package http
 
 import (
-	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
+	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
 
 // TweetHandler handles tweet-related HTTP endpoints.
 // TODO: Refactor TweetHandler to use a usecase for tweet logic, following hexagonal architecture.
 type TweetHandler struct {
-	Usecase *usecase.TweetUsecase
+	createTweetUseCase ports.CreateTweetUseCasePort
 }
 
 // NewTweetHandler creates a new TweetHandler.
 // producer: Kafka producer for follow events.
 // Returns a pointer to TweetHandler.
-func NewTweetHandler(tweetUsecase *usecase.TweetUsecase) *TweetHandler {
-	return &TweetHandler{Usecase: tweetUsecase}
+func NewTweetHandler(createTweetUseCase ports.CreateTweetUseCasePort) *TweetHandler {
+	return &TweetHandler{createTweetUseCase: createTweetUseCase}
 }
 
 // RegisterRoutes registers tweet endpoints on the given Gin router group.
@@ -33,11 +33,8 @@ func (h *TweetHandler) PostTweet(c *gin.Context) {
 		c.JSON(400, TweetPublishResponseDTO{Message: "Invalid tweet request"})
 		return
 	}
-	input := usecase.TweetInput{
-		AuthorID: req.AuthorID,
-		Content:  req.Content,
-	}
-	err := h.Usecase.PublishTweet(c.Request.Context(), input)
+
+	err := h.createTweetUseCase.Execute(c.Request.Context(), req.AuthorID, req.Content)
 	if err != nil {
 		c.JSON(500, TweetPublishResponseDTO{Message: "No se pudo publicar el tweet"})
 		return

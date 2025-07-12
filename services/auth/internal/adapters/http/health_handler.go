@@ -36,7 +36,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 	status := map[string]string{}
 	ok := true
 
-	requiredTopics := []string{h.cfg.KafkaUserEventsTopic}
+	requiredTopics := []string{h.cfg.KafkaUserConsumerConfig.Topic}
 	if h.Kafka != nil {
 		topics, err := h.Kafka.Topics()
 		topicsMap := map[string]bool{}
