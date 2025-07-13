@@ -13,14 +13,24 @@ type KafkaUserCreatedPayload struct {
 	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
 }
-type KafkaFollowRequest struct {
-	EventType string             `json:"event_type"`
-	Payload   KafkaFollowPayload `json:"payload,omitempty"`
+
+type KafkaCreateTweetRequest struct {
+	EventType string                  `json:"event_type"`
+	Payload   KafkaCreateTweetPayload `json:"payload,omitempty"`
 }
 
-type KafkaFollowPayload struct {
-	FollowerID int64 `json:"follower_id"`
-	FolloweeID int64 `json:"followee_id"`
+type KafkaCreateTweetPayload struct {
+	AuthorID int64  `json:"author_id"`
+	Content  string `json:"content"`
+}
+
+type KafkaDeleteTweetRequest struct {
+	EventType string                  `json:"event_type"`
+	Payload   KafkaDeleteTweetPayload `json:"payload,omitempty"`
+}
+
+type KafkaDeleteTweetPayload struct {
+	TweetID int64 `json:"tweet_id"`
 }
 
 type KafkaEventError struct {

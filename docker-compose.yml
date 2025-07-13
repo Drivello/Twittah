@@ -219,6 +219,15 @@ services:
       # --- Kafka ---
       - KAFKA_BROKERS=kafka:9092
 
+      # Kafka User Consumer
+      - KAFKA_USER_GROUP=user-service-group
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_USER_TOPIC_DLQ=users.events.dlq
+      - KAFKA_USER_TOPIC_DLQ_TTL=168h
+      - KAFKA_USER_TOPIC_RETRY_MAX_DURATION=2h
+      - KAFKA_USER_TOPIC_RETRY_MAX_BACKOFF=300s
+      - KAFKA_USER_TOPIC_RETRY_INITIAL_BACKOFF=5s
+
       # --- Kafka Tweet Consumer Config ---
       - KAFKA_TWEET_CONSUMER_GROUP_NAME=tweet-service-group
       - KAFKA_TWEET_TOPIC=tweets.events

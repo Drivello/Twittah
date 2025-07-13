@@ -36,7 +36,7 @@ func NewEventProducer[T any](brokers []string, topic string, builder KafkaEventR
 
 // PublishEvent publishes a KafkaEventRequest directly to Kafka.
 func (p *EventProducer[T]) PublishEvent(event KafkaEventRequest[T]) error {
-	common.Logger().Debug("[EventProducer] Publishing event "+event.EventType+" to topic "+p.Topic, "event_type", event.EventType)
+	common.Logger().Debug("[EventProducer] Publishing event " + event.EventType + " to topic " + p.Topic)
 
 	value, err := json.Marshal(event)
 	if err != nil {

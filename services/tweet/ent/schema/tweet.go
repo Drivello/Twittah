@@ -21,6 +21,7 @@ func (Tweet) Fields() []ent.Field {
 			Immutable().
 			Unique().
 			StructTag(`json:"id,omitempty"`),
+
 		field.String("content").
 			NotEmpty().
 			MaxLen(280),

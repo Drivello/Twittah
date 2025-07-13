@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Drivello/Twittah/services/auth/config"
-	"github.com/Drivello/Twittah/services/auth/ent"
 	authhttp "github.com/Drivello/Twittah/services/auth/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/postgres"
@@ -45,14 +44,11 @@ func main() {
 	}
 
 	// Database connection
-	entClient, err := ent.Open("postgres", cfg.PostgresDSN)
+	entClient, err := config.InitEntClient(cfg.PostgresDSN)
 	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
+		common.Logger().Fatalf("failed opening connection to postgres: %v", err)
 	}
-	// Migración automática Ent
-	if err := entClient.Schema.Create(context.Background()); err != nil {
-		logger.Fatal("Failed to run Ent migration", zap.Error(err))
-	}
+	defer entClient.Close()
 
 	repo := postgres.NewPostgresUserRepository(entClient)
 	authUC := usecase.NewRegisterUserUseCase(repo, userProducer)
@@ -66,7 +62,7 @@ func main() {
 	workQueue := common.NewWorkQueue(workerCount, queueSize)
 
 	// Start Kafka Auth consumers with cancelable context
-	go kafka.StartKafkaConsumers(ctx, cfg, repo, authUC, authProducer, workQueue)
+	go kafka.StartKafkaConsumers(ctx, cfg, authUC, authProducer, workQueue)
 
 	// Setup Gin HTTP server
 	r := gin.Default()

@@ -18,19 +18,14 @@ func main() {
 	common.InitLogger(cfg.LogLevel)
 	defer common.Logger().Sync()
 
-	client, err := config.InitEntClient(cfg.PostgresDSN)
+	entClient, err := config.InitEntClient(cfg.PostgresDSN)
 	if err != nil {
 		common.Logger().Fatalf("failed opening connection to postgres: %v", err)
 	}
-	defer client.Close()
-
-	// Migración automática Ent
-	if err := client.Schema.Create(context.Background()); err != nil {
-		common.Logger().Fatalf("failed to run Ent migration: %v", err)
-	}
+	defer entClient.Close()
 
 	// Repositories
-	repo := postgres.NewEntUserRepository(client)
+	repo := postgres.NewEntUserRepository(entClient)
 
 	// Event Usecases
 	createUserUC := usecase.NewCreateUserUseCase(repo)
@@ -63,7 +58,7 @@ func main() {
 	r := gin.Default()
 	handler.RegisterRoutes(r)
 
-	healthHandler := http.NewHealthHandler(cfg, client)
+	healthHandler := http.NewHealthHandler(cfg, entClient)
 	healthHandler.RegisterRoutes(r)
 
 	if err := r.Run(":" + cfg.ServicePort); err != nil {

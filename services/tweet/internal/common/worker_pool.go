@@ -28,9 +28,21 @@ type WorkQueue struct {
 }
 
 // NewWorkQueue creates a new WorkQueue with the given number of workers
-func NewWorkQueue(workers int, queueSize int) *WorkQueue {
+func NewWorkQueue(ioBound bool) *WorkQueue {
+	// CalculateWorkerConfig calculates worker count and queue size based on CPU
+	var workers int
+	var queue int
+
+	numCPU := runtime.NumCPU()
+	if ioBound {
+		workers = int(math.Max(1, float64(numCPU*2))) // 2x CPUs for I/O
+	} else {
+		workers = numCPU // 1x CPUs for CPU-bound
+	}
+	queue = workers * 4 // buffer factor
+
 	return &WorkQueue{
-		queue:    make(chan WorkItem, queueSize),
+		queue:    make(chan WorkItem, queue),
 		workers:  workers,
 		shutdown: make(chan struct{}),
 	}
@@ -116,16 +128,4 @@ func (wq *WorkQueue) Stop() {
 	close(wq.shutdown)
 	wq.wg.Wait()
 	Logger().Info("All workers stopped")
-}
-
-// CalculateWorkerConfig calculates worker count and queue size based on CPU
-func CalculateWorkerConfig(ioBound bool) (workers int, queue int) {
-	numCPU := runtime.NumCPU()
-	if ioBound {
-		workers = int(math.Max(1, float64(numCPU*2))) // 2x CPUs for I/O
-	} else {
-		workers = numCPU // 1x CPUs for CPU-bound
-	}
-	queue = workers * 4 // buffer factor
-	return
 }

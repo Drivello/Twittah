@@ -17,6 +17,9 @@ type Config struct {
 	// Kafka
 	KafkaBrokers []string
 
+	// Kafka User Consumer
+	KafkaUserConsumerConfig ConsumerConfig
+
 	// Kafka Tweet Consumer
 	KafkaTweetConsumerConfig ConsumerConfig
 }
@@ -34,8 +37,26 @@ func LoadConfig() *Config {
 	brokersStr := mustGetEnv("KAFKA_BROKERS")
 	brokers := strings.Split(brokersStr, ",")
 
+	// Kafka User Config
+	kafkaUserConsumerConfig := ConsumerConfig{
+		Group:    mustGetEnv("KAFKA_USER_GROUP"),
+		Topic:    mustGetEnv("KAFKA_USER_TOPIC"),
+		DLQTopic: mustGetEnv("KAFKA_USER_TOPIC_DLQ"),
+		TTL:      getEnvAsDuration("KAFKA_USER_TOPIC_DLQ_TTL", 0),
+		RetryConfig: RetryConfig{
+			MaxRetryDuration: getEnvAsDuration("KAFKA_USER_TOPIC_RETRY_MAX_DURATION", 0),
+			MaxBackoff:       getEnvAsDuration("KAFKA_USER_TOPIC_RETRY_MAX_BACKOFF", 0),
+			InitialBackoff:   getEnvAsDuration("KAFKA_USER_TOPIC_RETRY_INITIAL_BACKOFF", 0),
+		},
+		DLQConfig: DLQConfig{
+			DLQTopic:    mustGetEnv("KAFKA_USER_TOPIC_DLQ"),
+			SourceTopic: mustGetEnv("KAFKA_USER_TOPIC"),
+			TTL:         getEnvAsDuration("KAFKA_USER_TOPIC_DLQ_TTL", 0),
+		},
+	}
+
 	// Kafka Tweet Consumer Config
-	tweetConsumerConfig := ConsumerConfig{
+	kafkaTweetConsumerConfig := ConsumerConfig{
 		Group:    mustGetEnv("KAFKA_TWEET_CONSUMER_GROUP_NAME"),
 		Topic:    mustGetEnv("KAFKA_TWEET_TOPIC"),
 		DLQTopic: mustGetEnv("KAFKA_TWEET_DLQ_TOPIC"),
@@ -58,6 +79,7 @@ func LoadConfig() *Config {
 		PostgresDSN:              postgresDSN,
 		RedisAddr:                redisAddr,
 		KafkaBrokers:             brokers,
-		KafkaTweetConsumerConfig: tweetConsumerConfig,
+		KafkaUserConsumerConfig:  kafkaUserConsumerConfig,
+		KafkaTweetConsumerConfig: kafkaTweetConsumerConfig,
 	}
 }

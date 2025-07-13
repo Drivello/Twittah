@@ -2,7 +2,7 @@ package domain
 
 type Tweet struct {
 	ID        int64
-	UserID    string
+	AuthorID  int64
 	Content   string
 	CreatedAt int64
 }

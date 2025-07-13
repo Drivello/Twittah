@@ -18,7 +18,7 @@ var (
 	dlqConsumerGroup  sarama.ConsumerGroup
 )
 
-func StartKafkaConsumers(ctx context.Context, cfg *config.Config, repo ports.AuthRepositoryPort, registerUserUC ports.RegisterUserUseCasesPort, producer ports.EventProducerPort, workQueue *common.WorkQueue) {
+func StartKafkaConsumers(ctx context.Context, cfg *config.Config, registerUserUC ports.RegisterUserUseCasesPort, producer ports.EventProducerPort, workQueue *common.WorkQueue) {
 	common.Logger().Debug("[KafkaSetup] Entrando a StartKafkaConsumers")
 
 	authConsumer := NewAuthConsumer(producer, cfg.KafkaUserConsumerConfig, workQueue, registerUserUC)

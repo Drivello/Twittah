@@ -54,7 +54,7 @@ func BuildKafkaEventRequest(eventType string, payload interface{}) (interface{},
 
 // PublishEvent publica un evento a Kafka usando el builder centralizado.
 func (p *EventProducer) PublishEvent(eventType string, payload interface{}) error {
-	common.Logger().Debug("[UserEventProducer] Publishing event "+eventType+" to topic "+p.Topic, zap.String("event_type", eventType))
+	common.Logger().Debug("[UserEventProducer] Publishing event "+eventType+" to topic "+p.Topic, zap.String(" event_type ", eventType))
 	event, err := BuildKafkaEventRequest(eventType, payload)
 	if err != nil {
 		common.Logger().Error("[UserEventProducer] BuildKafkaEventRequest error", zap.String("event_type", eventType), zap.Error(err))

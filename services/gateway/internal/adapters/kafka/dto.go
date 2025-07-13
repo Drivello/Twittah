@@ -27,7 +27,6 @@ type KafkaUserCreatedPayload struct {
 
 // KafkaTweetCreatePayload representa el payload para crear un tweet
 type KafkaTweetCreatePayload struct {
-	TweetID  int64  `json:"tweet_id"`
 	AuthorID int64  `json:"author_id"`
 	Content  string `json:"content"`
 }
