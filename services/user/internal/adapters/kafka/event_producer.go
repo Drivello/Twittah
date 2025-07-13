@@ -16,13 +16,14 @@ type EventProducer struct {
 // NewEventProducer creates a new EventProducer for the given brokers and topic.
 func NewEventProducer(brokers []string, topic string) (*EventProducer, error) {
 	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
 		common.Logger().Error("[EventProducer] Failed to create SyncProducer", "error", err)
 		return nil, err
 	}
-	common.Logger().Info("[EventProducer] SyncProducer created successfully", "brokers", brokers, "topic", topic)
+	common.Logger().Info("[EventProducer] SyncProducer created successfully.", " brokers ", brokers, " topic ", topic)
 	return &EventProducer{Producer: producer, Topic: topic}, nil
 }
 

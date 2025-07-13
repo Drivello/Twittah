@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
@@ -24,11 +23,8 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 
 	var req KafkaEventRequest
 	if err := json.Unmarshal(data, &req); err != nil {
-		common.Logger().Error("[KafkaEventDispatcher] Invalid event message, skipping", zap.Error(err))
-		return &KafkaEventError{
-			EventType: "invalid.event",
-			Error:     err,
-		}
+		common.Logger().Error("[KafkaEventDispatcher] Invalid event message. Skipping.", zap.Error(err))
+		return nil
 	}
 
 	switch req.EventType {
@@ -48,14 +44,10 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 				Error:     err,
 			}
 		}
+		return nil
 
 	default:
-		common.Logger().Error("[KafkaEventDispatcher] Unknown event type", zap.String("event_type", req.EventType))
-		return &KafkaEventError{
-			EventType: "unknown.event",
-			Error:     errors.New("unknown event type"),
-		}
+		common.Logger().Error("[KafkaEventDispatcher] Unknown event type. Skipping.", zap.String("event_type", req.EventType))
+		return nil
 	}
-	return nil
-
 }

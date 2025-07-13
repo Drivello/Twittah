@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
-	"github.com/Drivello/Twittah/services/gateway/internal/domain"
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
+	"github.com/Drivello/Twittah/services/gateway/internal/domain"
 	"go.uber.org/zap"
 )
 
@@ -17,12 +18,13 @@ type UserServiceHTTPAdapter struct {
 }
 
 func NewUserServiceHTTPAdapter(baseURL string) *UserServiceHTTPAdapter {
+	common.Logger().Debug("[Gateway] Creating UserServiceHTTPAdapter with url: ", zap.String("url", baseURL))
 	return &UserServiceHTTPAdapter{BaseURL: baseURL}
 }
 
-func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID string) ([]*domain.User, error) {
-	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers called", zap.String("user_id", userID), zap.String("url", a.BaseURL+"/followers/"+userID))
-	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/followers/"+userID, nil)
+func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID int64) ([]*domain.User, error) {
+	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers called", zap.Int64("user_id", userID), zap.String("url", a.BaseURL+"/followers/"+strconv.FormatInt(userID, 10)))
+	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/followers/"+strconv.FormatInt(userID, 10), nil)
 	if err != nil {
 		common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.NewRequest error", zap.Error(err))
 		return nil, err
@@ -44,11 +46,11 @@ func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID string
 		common.Logger().Debug("[Gateway] UserServiceHTTPAdapter decode error", zap.Error(err))
 		return nil, err
 	}
-	// Map DTO to domain.User
+
 	users := make([]*domain.User, len(followersDTO.Followers))
 	for i, f := range followersDTO.Followers {
 		users[i] = &domain.User{ID: f.ID, Username: f.Username}
 	}
-	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers success", zap.String("user_id", userID), zap.Any("followers", users))
+	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers success", zap.Int64("user_id", userID), zap.Any("followers", users))
 	return users, nil
 }

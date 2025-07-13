@@ -10,6 +10,9 @@ type Config struct {
 	Port     string
 	LogLevel string
 
+	// Services
+	UserServiceURL string
+
 	// Database
 	PostgresDSN string
 	RedisAddr   string
@@ -32,6 +35,9 @@ func LoadConfig() *Config {
 	// Database
 	postgresDSN := mustGetEnv("TWEET_POSTGRES_DSN")
 	redisAddr := mustGetEnv("TWEET_REDIS_ADDR")
+
+	// Services
+	userServiceUrl := mustGetEnv("USER_MICROSERVICE_URL")
 
 	// Kafka
 	brokersStr := mustGetEnv("KAFKA_BROKERS")
@@ -76,6 +82,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Port:                     port,
 		LogLevel:                 logLevel,
+		UserServiceURL:           userServiceUrl,
 		PostgresDSN:              postgresDSN,
 		RedisAddr:                redisAddr,
 		KafkaBrokers:             brokers,

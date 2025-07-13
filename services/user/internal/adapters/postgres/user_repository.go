@@ -55,8 +55,8 @@ func (r *EntUserRepository) FollowUser(ctx context.Context, followerID, followee
 	}
 
 	_, err := r.client.User.
-		UpdateOneID(followerID).
-		AddFollowingIDs(followeeID).
+		UpdateOneID(followeeID).
+		AddFollowerIDs(followerID).
 		Save(ctx)
 
 	if err != nil {
@@ -71,8 +71,8 @@ func (r *EntUserRepository) UnfollowUser(ctx context.Context, followerID, follow
 		return fmt.Errorf("cannot unfollow yourself")
 	}
 	_, err := r.client.User.
-		UpdateOneID(followerID).
-		RemoveFollowingIDs(followeeID).
+		UpdateOneID(followeeID).
+		RemoveFollowerIDs(followerID).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to unfollow user: %w", err)
@@ -88,6 +88,7 @@ func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]*
 		QueryFollowers().
 		All(ctx)
 	if err != nil {
+		common.Logger().Debug("[UserRepository] GetFollowers error", zap.Int64("user_id", userID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get followers: %w", err)
 	}
 	followers := make([]*domain.User, len(response))
@@ -97,16 +98,19 @@ func (r *EntUserRepository) GetFollowers(ctx context.Context, userID int64) ([]*
 			Username: f.Username,
 		}
 	}
+	common.Logger().Debug("[UserRepository] GetFollowers success", zap.Int64("user_id", userID), zap.Any("followers", followers))
 	return followers, nil
 }
 
 func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]*domain.User, error) {
+	common.Logger().Debug("[UserRepository] GetFollowing", zap.Int64("user_id", userID))
 	response, err := r.client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
 		QueryFollowing().
 		All(ctx)
 	if err != nil {
+		common.Logger().Debug("[UserRepository] GetFollowing error", zap.Int64("user_id", userID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get following: %w", err)
 	}
 	following := make([]*domain.User, len(response))
@@ -116,6 +120,7 @@ func (r *EntUserRepository) GetFollowing(ctx context.Context, userID int64) ([]*
 			Username: f.Username,
 		}
 	}
+	common.Logger().Debug("[UserRepository] GetFollowing success", zap.Int64("user_id", userID), zap.Any("following", following))
 	return following, nil
 }
 

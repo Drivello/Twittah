@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/Drivello/Twittah/services/user/internal/common"
 	"github.com/Drivello/Twittah/services/user/internal/ports"
@@ -28,11 +27,8 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 
 	var req KafkaEventRequest
 	if err := json.Unmarshal(data, &req); err != nil {
-		common.Logger().Error("[KafkaEventDispatcher] Invalid event message, skipping", zap.Error(err))
-		return &KafkaEventError{
-			EventType: req.EventType,
-			Error:     err,
-		}
+		common.Logger().Error("[KafkaEventDispatcher] Invalid event message. Skipping.", zap.Error(err))
+		return nil
 	}
 	common.Logger().Debug("[KafkaEventDispatcher] Dispatching event", zap.String("event_type", req.EventType))
 
@@ -70,11 +66,8 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 		err := HandleUserUnfollow(ctx, d.UnfollowUC, unfollowRequest.Payload)
 		return returnEventError(err, req)
 	default:
-		common.Logger().Error("[KafkaEventDispatcher] Unknown event type", zap.String("event_type", req.EventType))
-		return &KafkaEventError{
-			EventType: "unknown.event",
-			Error:     errors.New("unknown event type"),
-		}
+		common.Logger().Error("[KafkaEventDispatcher] Unknown event type. Skipping.", zap.String("event_type", req.EventType))
+		return nil
 	}
 
 }

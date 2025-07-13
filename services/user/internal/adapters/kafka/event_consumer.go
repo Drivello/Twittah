@@ -36,28 +36,8 @@ func (c *UserEventConsumer) Cleanup(_ sarama.ConsumerGroupSession) error { retur
 
 func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	topic := claim.Topic()
-	common.Logger().Info("[UserEventConsumer] ConsumeClaim started for user events topic", zap.String("topic", topic))
+	common.Logger().Info("[EventConsumer] ConsumeClaim started for topic", zap.String("topic", topic))
 
-	process := func(item common.WorkItem) {
-		ctx := item.Ctx
-		msg, _ := item.Msg.(sarama.ConsumerMessage)
-
-		kafkaEventError := c.eventDispatcher.Dispatch(ctx, msg.Value)
-
-		if kafkaEventError != nil {
-			common.Logger().Error("[KafkaConsumer] Failed to process event, sending to DLQ. Error: ",
-				zap.Error(kafkaEventError.Error))
-
-			dlqErr := SendToDLQ(c.Producer, c.Config.DLQTopic, msg.Value)
-			if dlqErr != nil {
-				common.Logger().Error("Failed to send message to DLQ", zap.Error(dlqErr))
-			}
-		}
-
-		sess.MarkMessage(&msg, "")
-	}
-
-	c.WorkQueue.Start(process, c.Config.RetryConfig.MaxRetryDuration)
 	defer c.WorkQueue.Stop()
 
 	for msg := range claim.Messages() {
@@ -73,7 +53,7 @@ func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 		})
 
 		if err != nil {
-			common.Logger().Error("[UserEventConsumer] Failed to process user event message",
+			common.Logger().Error("[EventConsumer] Failed to process user event message",
 				zap.Error(err))
 			dlqErr := SendToDLQ(c.Producer, c.Config.DLQTopic, msg.Value)
 			if dlqErr != nil {
@@ -81,7 +61,7 @@ func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 			}
 			sess.MarkMessage(msg, "")
 		} else {
-			common.Logger().Info("[UserEventConsumer] User event message processed successfully", zap.String("event_type", req.EventType))
+			common.Logger().Info("[EventConsumer] User event message processed successfully", zap.String("event_type", req.EventType))
 		}
 
 		sess.MarkMessage(msg, "")

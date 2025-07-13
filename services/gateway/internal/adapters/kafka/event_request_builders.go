@@ -36,6 +36,7 @@ type TweetPayload interface {
 }
 
 func (KafkaTweetCreatePayload) isTweetPayload() {}
+func (KafkaTweetDeletePayload) isTweetPayload() {}
 
 func AuthEventRequestBuilder(eventType string, payload AuthPayload) (KafkaEventRequest[AuthPayload], error) {
 	switch eventType {

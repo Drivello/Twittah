@@ -5,6 +5,8 @@ import (
 
 	"github.com/Drivello/Twittah/services/tweet/config"
 
+	"github.com/Drivello/Twittah/services/tweet/internal/adapters"
+	"github.com/Drivello/Twittah/services/tweet/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/postgres"
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
@@ -29,6 +31,9 @@ func main() {
 	}
 	defer entClient.Close()
 
+	// Services
+	userService := adapters.NewUserServiceHTTPAdapter(cfg.UserServiceURL)
+
 	// Repositories
 	tweetRepo := postgres.NewTweetRepository(entClient)
 	userRepo := postgres.NewUserRepository(entClient)
@@ -37,6 +42,11 @@ func main() {
 	createUserUC := usecase.NewCreateUserUsecase(userRepo)
 	createTweetUC := usecase.NewCreateTweetUsecase(tweetRepo)
 	deleteTweetUC := usecase.NewDeleteTweetUsecase(tweetRepo)
+	getTimelineUC := usecase.NewGetTimelineUseCase(tweetRepo, userService)
+	getTweetsFromMultipleUserIDsUC := usecase.NewGetTweetsFromMultipleUserIDsUsecase(tweetRepo)
+	getUserTweetsUC := usecase.NewGetUserTweetsUsecase(tweetRepo)
+
+	tweetQueryHandler := http.NewTweetQueryHandler(getTimelineUC, getTweetsFromMultipleUserIDsUC, getUserTweetsUC)
 
 	// Inicializar Kafka
 	producer, err := kafka.NewSyncProducer(cfg.KafkaBrokers)
@@ -60,6 +70,9 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	tweetGroup := r.Group("/")
+	tweetQueryHandler.RegisterRoutes(tweetGroup)
 
 	common.Logger().Info("Tweet service started", zap.String("addr", cfg.Port))
 	if err := r.Run(":" + cfg.Port); err != nil {

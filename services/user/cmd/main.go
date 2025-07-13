@@ -2,15 +2,22 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	stdhttp "net/http"
 
 	"github.com/Drivello/Twittah/services/user/config"
-	"github.com/Drivello/Twittah/services/user/internal/adapters/http"
+	userhttp "github.com/Drivello/Twittah/services/user/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/user/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/user/internal/adapters/postgres"
 	"github.com/Drivello/Twittah/services/user/internal/common"
 	"github.com/Drivello/Twittah/services/user/internal/usecase"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -45,23 +52,43 @@ func main() {
 
 	// Worker pool
 	workQueue := common.NewWorkQueue(true)
+	kafkaEventDispatcher := kafka.NewKafkaEventDispatcher(createUserUC, followUC, unfollowUC)
+	process := kafka.DefaultKafkaWorkProcess(kafkaEventDispatcher, producer, cfg.KafkaUserConsumerConfig.DLQTopic)
+	go workQueue.Start(process, cfg.KafkaUserConsumerConfig.RetryConfig.MaxRetryDuration)
 	defer workQueue.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kafkaEventDispatcher := kafka.NewKafkaEventDispatcher(createUserUC, followUC, unfollowUC)
+	go kafka.StartKafkaConsumers(ctx, cfg, repo, kafkaEventDispatcher, producer, workQueue)
 
-	kafka.StartKafkaConsumers(ctx, cfg, repo, kafkaEventDispatcher, producer, workQueue)
-
-	handler := http.NewUserHandler(getFollowersUC, getFollowingUC)
+	handler := userhttp.NewUserHandler(getFollowersUC, getFollowingUC)
 	r := gin.Default()
 	handler.RegisterRoutes(r)
 
-	healthHandler := http.NewHealthHandler(cfg, entClient)
+	healthHandler := userhttp.NewHealthHandler(cfg, entClient)
 	healthHandler.RegisterRoutes(r)
 
-	if err := r.Run(":" + cfg.ServicePort); err != nil {
-		common.Logger().Fatalf("failed to run http server: %v", err)
+	// Graceful shutdown
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	server := &stdhttp.Server{Addr: ":" + cfg.ServicePort, Handler: r}
+
+	go func() {
+		common.Logger().Info("[UserService] HTTP server starting", zap.String("port", cfg.ServicePort))
+		if err := server.ListenAndServe(); err != nil && err != stdhttp.ErrServerClosed {
+			common.Logger().Fatalf("failed to run http server: %v", err)
+		}
+	}()
+
+	common.Logger().Info("[UserService] Service started successfully and is ready to accept requests", zap.String("port", cfg.ServicePort))
+
+	<-shutdown
+	common.Logger().Info("[UserService] Shutdown signal received, shutting down gracefully...")
+	ctxTimeout, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelTimeout()
+	if err := server.Shutdown(ctxTimeout); err != nil {
+		common.Logger().Error("[UserService] Error during server shutdown", zap.Error(err))
 	}
+	common.Logger().Info("[UserService] Server exited cleanly")
 }

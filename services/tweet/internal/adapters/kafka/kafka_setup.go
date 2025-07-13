@@ -11,12 +11,14 @@ import (
 // NewSyncProducer creates a SyncProducer for Kafka
 func NewSyncProducer(brokers []string) (sarama.SyncProducer, error) {
 	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Producer.Return.Successes = true
 	return sarama.NewSyncProducer(brokers, config)
 }
 
 func StartConsumerGroup(brokers []string, group string, topics []string, handler sarama.ConsumerGroupHandler) error {
 	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Version = sarama.V2_1_0_0
 	consumer, err := sarama.NewConsumerGroup(brokers, group, config)
 	if err != nil {

@@ -48,16 +48,20 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 
 func (h *UserHandler) GetFollowing(c *gin.Context) {
 	userIDStr := c.Param("user_id")
+	common.Logger().Debug("[UserService] HTTP GetFollowing handler called", zap.String("user_id", userIDStr))
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
+		common.Logger().Debug("[UserService] Invalid user_id", zap.String("user_id", userIDStr), zap.Error(err))
 		c.JSON(400, gin.H{"error": "invalid user_id"})
 		return
 	}
 	following, err := h.GetFollowingUseCase.Execute(c.Request.Context(), userID)
 	if err != nil {
+		common.Logger().Debug("[UserService] GetFollowingUseCase error", zap.Int64("user_id", userID), zap.Error(err))
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	common.Logger().Debug("[UserService] GetFollowing handler success", zap.Int64("user_id", userID), zap.Any("following", following))
 	resp := GetFollowingResponseDTO{Following: following}
 	c.JSON(200, resp)
 }

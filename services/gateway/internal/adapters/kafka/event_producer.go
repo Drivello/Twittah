@@ -18,6 +18,7 @@ type KafkaEventRequestBuilder[T any] func(eventType string, payload T) (KafkaEve
 
 func NewEventProducer[T any](brokers []string, topic string, builder KafkaEventRequestBuilder[T]) (*EventProducer[T], error) {
 	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Producer.Return.Successes = true
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
@@ -26,7 +27,7 @@ func NewEventProducer[T any](brokers []string, topic string, builder KafkaEventR
 		return nil, err
 	}
 
-	common.Logger().Info("[EventProducer] SyncProducer created successfully", "brokers", brokers, "topic", topic)
+	common.Logger().Info("[EventProducer] SyncProducer created successfully.", " brokers ", brokers, " topic ", topic)
 	return &EventProducer[T]{
 		Producer: producer,
 		Topic:    topic,

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/Drivello/Twittah/services/tweet/internal/common"
 	"github.com/Drivello/Twittah/services/tweet/internal/domain"
 	"github.com/Drivello/Twittah/services/tweet/internal/ports"
-	"github.com/Drivello/Twittah/services/tweet/internal/common"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +15,7 @@ func HandleTweetCreated(ctx context.Context, uc ports.CreateTweetUsecasePort, pa
 	if uc == nil {
 		return errors.New("TweetCreatedUC is nil")
 	}
-	return uc.CreateTweet(ctx, &domain.Tweet{
+	return uc.Execute(ctx, &domain.Tweet{
 		AuthorID: payload.AuthorID,
 		Content:  payload.Content,
 	})
@@ -26,5 +26,5 @@ func HandleTweetDeleted(ctx context.Context, uc ports.DeleteTweetUsecasePort, pa
 	if uc == nil {
 		return errors.New("TweetDeletedUC is nil")
 	}
-	return uc.DeleteTweet(ctx, payload.TweetID)
+	return uc.Execute(ctx, payload.TweetID)
 }

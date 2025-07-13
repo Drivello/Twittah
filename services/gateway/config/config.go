@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
@@ -11,57 +9,45 @@ import (
 
 // GatewayConfig holds all configuration for the Gateway Service.
 type GatewayConfig struct {
-	Port                string
-	KafkaBrokers        []string
-	KafkaAuthTopic      string
-	KafkaUserTopic      string
-	KafkaTweetTopic     string
-	LogLevel            string
-	UserMicroserviceURL string
+	Port                 string
+	KafkaBrokers         []string
+	KafkaAuthTopic       string
+	KafkaUserTopic       string
+	KafkaTweetTopic      string
+	LogLevel             string
+	UserMicroserviceURL  string
+	TweetMicroserviceURL string
 }
 
 // LoadConfig loads all required configuration from environment variables.
 // Returns a pointer to GatewayConfig and error if any variable is missing.
 func LoadConfig() (*GatewayConfig, error) {
-	port := os.Getenv("GATEWAY_PORT")
-	if port == "" {
-		return nil, fmt.Errorf("GATEWAY_PORT env var required")
-	}
-	brokersStr := os.Getenv("KAFKA_BROKERS")
-	if brokersStr == "" {
-		return nil, fmt.Errorf("KAFKA_BROKERS env var required")
-	}
+	// Service
+	port := mustGetEnv("GATEWAY_PORT")
+	logLevel := getEnvOrDefault("LOG_LEVEL", "info")
+
+	// Kafka
+	brokersStr := mustGetEnv("KAFKA_BROKERS")
 	brokers := strings.Split(brokersStr, ",")
 
-	userTopic := os.Getenv("KAFKA_USER_TOPIC")
-	if userTopic == "" {
-		return nil, fmt.Errorf("KAFKA_USER_TOPIC env var required")
-	}
-	authTopic := os.Getenv("KAFKA_AUTH_TOPIC")
-	if authTopic == "" {
-		return nil, fmt.Errorf("KAFKA_AUTH_TOPIC env var required")
-	}
-	tweetTopic := os.Getenv("KAFKA_TWEET_TOPIC")
-	if tweetTopic == "" {
-		return nil, fmt.Errorf("KAFKA_TWEET_TOPIC env var required")
-	}
+	// Kafka Topics
+	userTopic := mustGetEnv("KAFKA_USER_TOPIC")
+	authTopic := mustGetEnv("KAFKA_AUTH_TOPIC")
+	tweetTopic := mustGetEnv("KAFKA_TWEET_TOPIC")
 
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info"
-	}
-	userMicroserviceURL := os.Getenv("USER_MICROSERVICE_URL")
-	if userMicroserviceURL == "" {
-		return nil, fmt.Errorf("USER_MICROSERVICE_URL env var required")
-	}
+	// Microservices
+	userMicroserviceURL := mustGetEnv("USER_MICROSERVICE_URL")
+	tweetMicroserviceURL := mustGetEnv("TWEET_MICROSERVICE_URL")
+
 	return &GatewayConfig{
-		Port:                port,
-		KafkaBrokers:        brokers,
-		KafkaAuthTopic:      authTopic,
-		KafkaUserTopic:      userTopic,
-		KafkaTweetTopic:     tweetTopic,
-		LogLevel:            logLevel,
-		UserMicroserviceURL: userMicroserviceURL,
+		Port:                 port,
+		KafkaBrokers:         brokers,
+		KafkaAuthTopic:       authTopic,
+		KafkaUserTopic:       userTopic,
+		KafkaTweetTopic:      tweetTopic,
+		LogLevel:             logLevel,
+		UserMicroserviceURL:  userMicroserviceURL,
+		TweetMicroserviceURL: tweetMicroserviceURL,
 	}, nil
 }
 

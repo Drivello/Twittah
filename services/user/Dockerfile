@@ -11,5 +11,5 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/user_service ./user_service
 EXPOSE 8082
-ENV USER_SERVICE_PORT=8082
+ENV USER_SERVICE_PORT=8083
 ENTRYPOINT ["/app/user_service"]

@@ -31,6 +31,11 @@ type KafkaTweetCreatePayload struct {
 	Content  string `json:"content"`
 }
 
+// KafkaTweetDeletePayload representa el payload para eliminar un tweet
+type KafkaTweetDeletePayload struct {
+	TweetID int64 `json:"tweet_id"`
+}
+
 // KafkaEventError encapsula errores relacionados a eventos Kafka
 type KafkaEventError struct {
 	EventType string `json:"event_type"`

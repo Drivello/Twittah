@@ -61,11 +61,11 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 		wq.wg.Add(1)
 		go func(id int) {
 			defer wq.wg.Done()
-			Logger().Info("Worker started", zap.Int("worker_id", id))
+			Logger().Info("[WorkerPool] Worker started", zap.Int("worker_id", id))
 			for {
 				select {
 				case item := <-wq.queue:
-					Logger().Debug("Worker processing item", zap.Int("worker_id", id))
+					Logger().Debug("[WorkerPool] Worker processing item", zap.Int("worker_id", id))
 
 					// Crear un contexto desacoplado con timeout para el retry
 					ctx, cancel := context.WithTimeout(context.Background(), maxRetryDuration)
@@ -87,7 +87,7 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 					select {
 					case <-done:
 						// Processing completed successfully
-						Logger().Debug("Worker finished item", zap.Int("worker_id", id))
+						Logger().Debug("[WorkerPool] Worker finished item", zap.Int("worker_id", id))
 					case <-ctx.Done():
 						// Context for this work item was cancelled or timed out
 						Logger().Warn("WorkItem timeout/cancelled",
@@ -98,7 +98,7 @@ func (wq *WorkQueue) Start(process func(WorkItem), maxRetryDuration time.Duratio
 					}
 
 				case <-wq.shutdown:
-					Logger().Info("Worker shutting down", zap.Int("worker_id", id))
+					Logger().Info("[WorkerPool] Worker shutting down", zap.Int("worker_id", id))
 					return
 				}
 			}

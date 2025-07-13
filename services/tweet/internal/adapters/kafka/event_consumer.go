@@ -49,10 +49,10 @@ func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 			common.Logger().Error("[KafkaConsumer] Failed to process event, sending to DLQ. Error: ",
 				zap.Error(kafkaEventError.Error))
 
-			// dlqErr := SendToDLQ(c.Producer, c.Config.DLQTopic, msg.Value)
-			// if dlqErr != nil {
-			// 	common.Logger().Error("Failed to send message to DLQ", zap.Error(dlqErr))
-			// }
+			dlqErr := SendToDLQ(c.Producer, c.Config.DLQTopic, msg.Value)
+			if dlqErr != nil {
+				common.Logger().Error("Failed to send message to DLQ", zap.Error(dlqErr))
+			}
 		}
 
 		sess.MarkMessage(&msg, "")

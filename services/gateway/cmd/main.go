@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	gwhttp "github.com/Drivello/Twittah/services/gateway/internal/adapters/http"
 	adapters "github.com/Drivello/Twittah/services/gateway/internal/adapters"
+	gwhttp "github.com/Drivello/Twittah/services/gateway/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -34,18 +34,27 @@ func main() {
 		common.Logger().Fatal("failed to create kafka producers", zap.Error(err))
 	}
 
+	// Adapters
 	userServiceAdapter := adapters.NewUserServiceHTTPAdapter(cfg.UserMicroserviceURL)
+	tweetServiceAdapter := adapters.NewTweetServiceHTTPAdapter(cfg.TweetMicroserviceURL)
+
+	// Use cases
 	getFollowersUseCase := usecase.NewGetFollowersUseCase(userServiceAdapter)
 	userQueryHandler := gwhttp.NewUserQueryHandler(getFollowersUseCase)
-
 	registerUserUseCase := usecase.NewRegisterUserUseCase(authProducer)
 	followUseCase := usecase.NewFollowUseCase(userProducer)
 	unfollowUseCase := usecase.NewUnfollowUseCase(userProducer)
 	createTweetUseCase := usecase.NewCreateTweetUseCase(tweetProducer)
+	deleteTweetUseCase := usecase.NewDeleteTweetUseCase(tweetProducer)
+	getTimelineUseCase := usecase.NewGetTimelineUseCase(tweetServiceAdapter)
+	getTweetsFromMultipleUserIDsUseCase := usecase.NewGetTweetsFromMultipleUserIDsUseCase(tweetServiceAdapter)
+	getUserTweetsUseCase := usecase.NewGetUserTweetsUseCase(tweetServiceAdapter)
 
+	// Handlers
 	authHandler := gwhttp.NewAuthHandler(registerUserUseCase)
 	userHandler := gwhttp.NewUserHandler(followUseCase, unfollowUseCase)
-	tweetHandler := gwhttp.NewTweetHandler(createTweetUseCase)
+	tweetHandler := gwhttp.NewTweetHandler(createTweetUseCase, deleteTweetUseCase)
+	tweetQueryHandler := gwhttp.NewTweetQueryHandler(getTimelineUseCase, getTweetsFromMultipleUserIDsUseCase, getUserTweetsUseCase)
 
 	r := gin.Default()
 	userQueryHandler.RegisterRoutes(r.Group("/api"))
@@ -56,6 +65,7 @@ func main() {
 	authHandler.RegisterRoutes(authGroup)
 	tweetHandler.RegisterRoutes(tweetGroup)
 	userHandler.RegisterRoutes(userGroup)
+	tweetQueryHandler.RegisterRoutes(tweetGroup)
 
 	r.GET("/health", gwhttp.NewHealthHandler(cfg).Health)
 

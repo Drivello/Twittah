@@ -115,14 +115,20 @@ services:
     build:
       context: ./services/gateway
     environment:
-      - KAFKA_BROKERS=kafka:9092
+      # --- Service ---
       - GATEWAY_PORT=8081
+      - LOG_LEVEL=debug
+
+      # --- Microservices ---
+      - USER_MICROSERVICE_URL=http://user:8083
+      - TWEET_MICROSERVICE_URL=http://tweet:8084
+
+      # --- Kafka ---
+      - KAFKA_BROKERS=kafka:9092
       - KAFKA_AUTH_TOPIC=auth.events
       - KAFKA_USER_TOPIC=users.events
       - KAFKA_TWEET_TOPIC=tweets.events
       - KAFKA_TIMELINE_TOPIC=timelines.updated
-      - LOG_LEVEL=debug
-      - USER_MICROSERVICE_URL=http://user:8083
     depends_on:
       kafka:
         condition: service_healthy
@@ -151,7 +157,7 @@ services:
       - KAFKA_USER_TOPIC=users.events
 
       # --- Kafka Auth Consumer Config ---
-      - KAFKA_AUTH_CONSUMER_GROUP_NAME=auth-user-event-group
+      - KAFKA_AUTH_CONSUMER_GROUP_NAME=authms-auth-user-event-group
       - KAFKA_AUTH_TOPIC=auth.events
       - KAFKA_AUTH_DLQ_TOPIC=auth.events.dlq
       - KAFKA_AUTH_DLQ_TTL=168h
@@ -184,7 +190,7 @@ services:
       - KAFKA_BROKERS=kafka:9092
 
       # Kafka User Consumer
-      - KAFKA_USER_GROUP=user-service-group
+      - KAFKA_USER_GROUP=userms-user-service-group
       - KAFKA_USER_TOPIC=users.events
       - KAFKA_USER_TOPIC_DLQ=users.events.dlq
       - KAFKA_USER_TOPIC_DLQ_TTL=168h
@@ -212,6 +218,9 @@ services:
       - TWEET_PORT=8084
       - LOG_LEVEL=debug
 
+      # --- Microservices ---
+      - USER_MICROSERVICE_URL=http://user:8083
+
       # --- Database ---
       - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
       - TWEET_REDIS_ADDR=redis-tweet:6379
@@ -220,7 +229,7 @@ services:
       - KAFKA_BROKERS=kafka:9092
 
       # Kafka User Consumer
-      - KAFKA_USER_GROUP=user-service-group
+      - KAFKA_USER_GROUP=tweetms-user-service-group
       - KAFKA_USER_TOPIC=users.events
       - KAFKA_USER_TOPIC_DLQ=users.events.dlq
       - KAFKA_USER_TOPIC_DLQ_TTL=168h
@@ -229,7 +238,7 @@ services:
       - KAFKA_USER_TOPIC_RETRY_INITIAL_BACKOFF=5s
 
       # --- Kafka Tweet Consumer Config ---
-      - KAFKA_TWEET_CONSUMER_GROUP_NAME=tweet-service-group
+      - KAFKA_TWEET_CONSUMER_GROUP_NAME=tweetms-tweet-service-group
       - KAFKA_TWEET_TOPIC=tweets.events
       - KAFKA_TWEET_DLQ_TOPIC=tweets.events.dlq
       - KAFKA_TWEET_DLQ_TTL=168h

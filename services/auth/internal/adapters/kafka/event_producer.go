@@ -18,13 +18,14 @@ type EventProducer struct {
 // NewEventProducer creates a new EventProducer for the given brokers and topic.
 func NewEventProducer(brokers []string, topic string) (*EventProducer, error) {
 	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
 		common.Logger().Error("[EventProducer] Failed to create SyncProducer", zap.Error(err))
 		return nil, err
 	}
-	common.Logger().Info("[EventProducer] SyncProducer created successfully", zap.Strings("brokers ", brokers), zap.String("topic ", topic))
+	common.Logger().Info("[EventProducer] SyncProducer created successfully.", zap.Strings(" brokers ", brokers), zap.String(" topic ", topic))
 	return &EventProducer{Producer: producer, Topic: topic}, nil
 }
 
@@ -34,7 +35,6 @@ func BuildKafkaEventRequest(eventType string, payload interface{}) (interface{},
 	case "users.created":
 		userPayload, ok := payload.(KafkaUserCreatedPayload)
 		if !ok {
-			// Intentar type assertion usando el package explícito
 			if uptr, ok2 := payload.(*KafkaUserCreatedPayload); ok2 && uptr != nil {
 				userPayload = *uptr
 				ok = true
