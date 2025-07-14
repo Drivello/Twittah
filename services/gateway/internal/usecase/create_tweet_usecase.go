@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// UserUseCase implementa la lógica de usuario y cumple con el puerto hexagonal UserUseCasePort
+// CreateTweetUseCase implements the user logic and fulfills the hexagonal port CreateTweetUseCasePort.
 
 type CreateTweetUseCase struct {
 	Producer ports.EventProducerPort[kafka.TweetPayload]
@@ -18,7 +18,7 @@ type CreateTweetUseCase struct {
 
 var _ ports.CreateTweetUseCasePort = (*CreateTweetUseCase)(nil)
 
-// NewTweetUseCase crea un nuevo UserUseCase.
+// NewCreateTweetUseCase creates a new CreateTweetUseCase.
 func NewCreateTweetUseCase(producer ports.EventProducerPort[kafka.TweetPayload]) *CreateTweetUseCase {
 	return &CreateTweetUseCase{Producer: producer}
 }

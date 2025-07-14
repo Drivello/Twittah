@@ -59,16 +59,16 @@ func ValidateIDListFromString(idList string) ([]int64, error) {
 }
 
 func IsValidPassword(password string) bool {
-	// Mínimo 8 caracteres
+	// Minimum 8 characters
 	if len(password) < 8 {
 		return false
 	}
-	// Al menos una mayúscula
+	// At least one uppercase letter
 	hasUppercase, _ := regexp.MatchString(`[A-Z]`, password)
 	if !hasUppercase {
 		return false
 	}
-	// Al menos un caracter especial
+	// At least one special character
 	hasSpecial, _ := regexp.MatchString(`[^a-zA-Z0-9]`, password)
 	if !hasSpecial {
 		return false

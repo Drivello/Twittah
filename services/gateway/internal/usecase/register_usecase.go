@@ -7,7 +7,7 @@ import (
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 )
 
-// AuthUseCase implementa la lógica de autenticación y cumple con el puerto hexagonal AuthUseCasePort
+// RegisterUserUseCase implements the authentication logic and fulfills the hexagonal port RegisterUserUseCasePort.
 
 type RegisterUserUseCase struct {
 	Producer ports.EventProducerPort[kafka.AuthPayload]

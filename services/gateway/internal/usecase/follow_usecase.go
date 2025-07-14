@@ -7,7 +7,7 @@ import (
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 )
 
-// UserUseCase implementa la lógica de usuario y cumple con el puerto hexagonal UserUseCasePort
+// FollowUseCase implements the user logic and fulfills the hexagonal port FollowUserUseCasePort.
 
 type FollowUseCase struct {
 	Producer ports.EventProducerPort[kafka.UserPayload]
@@ -15,7 +15,7 @@ type FollowUseCase struct {
 
 var _ ports.FollowUserUseCasePort = (*FollowUseCase)(nil)
 
-// NewFollowUseCase crea un nuevo UserUseCase.
+// NewFollowUseCase creates a new FollowUseCase.
 func NewFollowUseCase(producer ports.EventProducerPort[kafka.UserPayload]) *FollowUseCase {
 	return &FollowUseCase{Producer: producer}
 }
