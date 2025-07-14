@@ -23,6 +23,12 @@ func NewUserServiceHTTPAdapter(baseURL string) *UserServiceHTTPAdapter {
 }
 
 func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID int64) ([]*domain.User, error) {
+
+	_, err := common.ValidatePositiveInt(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers called", zap.Int64("user_id", userID), zap.String("url", a.BaseURL+"/followers/"+strconv.FormatInt(userID, 10)))
 	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/followers/"+strconv.FormatInt(userID, 10), nil)
 	if err != nil {
@@ -47,10 +53,16 @@ func (a *UserServiceHTTPAdapter) GetFollowers(ctx context.Context, userID int64)
 		return nil, err
 	}
 
+	if err := followersDTO.Validate(); err != nil {
+		common.Logger().Debug("[Gateway] UserServiceHTTPAdapter validate GetFollowersResponse error", zap.Error(err))
+		return nil, err
+	}
+
 	users := make([]*domain.User, len(followersDTO.Followers))
 	for i, f := range followersDTO.Followers {
 		users[i] = &domain.User{ID: f.ID, Username: f.Username}
 	}
+
 	common.Logger().Debug("[Gateway] UserServiceHTTPAdapter.GetFollowers success", zap.Int64("user_id", userID), zap.Any("followers", users))
 	return users, nil
 }

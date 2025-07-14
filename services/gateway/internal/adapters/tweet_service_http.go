@@ -121,16 +121,16 @@ func (a *TweetServiceHTTPAdapter) GetTweetsFromMultipleUserIDs(ctx context.Conte
 		strIDs[i] = strconv.FormatInt(id, 10)
 	}
 
-	userIDsQuery := "?user_ids=" + strings.Join(strIDs, ",")
-
-	_, err := common.ValidateIDListFromString(userIDsQuery)
+	err := common.ValidateIDList(userIDs)
 	if err != nil {
 		return nil, err
 	}
 
+	userIDsQuery := "user_ids=" + strings.Join(strIDs, ",")
+
 	common.Logger().Debug("[Gateway] TweetServiceHTTPAdapter.GetTweetsFromMultipleUserIDs called", zap.Any("user_ids", userIDs), zap.String("url", a.BaseURL+"/tweets/"+userIDsQuery))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/tweets/"+userIDsQuery, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", a.BaseURL+"/tweets?"+userIDsQuery, nil)
 	if err != nil {
 		common.Logger().Debug("[Gateway] TweetServiceHTTPAdapter.NewRequest error", zap.Error(err))
 		return nil, err
