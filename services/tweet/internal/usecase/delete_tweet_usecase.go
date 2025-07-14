@@ -25,13 +25,13 @@ func (uc *DeleteTweetUsecase) Execute(ctx context.Context, tweetID int64) error 
 		return fmt.Errorf("tweet id must be greater than zero")
 	}
 
-	err := uc.repo.Delete(tweetID)
-
+	tweet, err := uc.repo.FindByID(tweetID)
 	if err != nil {
 		return err
 	}
 
-	tweet, err := uc.repo.FindByID(tweetID)
+	err = uc.repo.Delete(tweetID)
+
 	if err != nil {
 		return err
 	}

@@ -41,7 +41,7 @@
 					"response": []
 				},
 				{
-					"name": "Auth - Registrar Usuario A",
+					"name": "Auth - Register User A",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -75,7 +75,7 @@
 					"response": []
 				},
 				{
-					"name": "Auth - Registrar Usuario B",
+					"name": "Auth - Register User B",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -109,7 +109,41 @@
 					"response": []
 				},
 				{
-					"name": "Follow - Seguir Usuario",
+					"name": "Auth - Register User C",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "3",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"Dai01\",\n  \"email\": \"Dai@gmail.com.ar\",\n  \"password\": \"Postman!\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8081/auth/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Follow - Follow User B -> A",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -135,17 +169,43 @@
 					"response": []
 				},
 				{
-					"name": "Follow - Dejar de Seguir Usuario",
+					"name": "Follow - Follow User C -> A",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "3"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8081/users/follow/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"users",
+								"follow",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Follow - Unfollow User C => A",
 					"request": {
 						"method": "DELETE",
 						"header": [
 							{
 								"key": "X-User-Id",
-								"value": "1"
+								"value": "3"
 							}
 						],
 						"url": {
-							"raw": "http://localhost:8081/users/unfollow/2",
+							"raw": "http://localhost:8081/users/unfollow/1",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -154,14 +214,14 @@
 							"path": [
 								"users",
 								"unfollow",
-								"2"
+								"1"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Follow - Ver Seguidores",
+					"name": "Follow - Ver Seguidores User A",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -193,7 +253,7 @@
 					"response": []
 				},
 				{
-					"name": "Tweets - Publicar Tweet",
+					"name": "Tweets - Publicar Tweet User A",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -259,7 +319,7 @@
 					"response": []
 				},
 				{
-					"name": "Tweets - Timeline",
+					"name": "Tweets - Get Timeline User B",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -279,6 +339,87 @@
 								"tweets",
 								"timeline",
 								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Metrics",
+			"item": [
+				{
+					"name": "Gateway Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/metrics",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"metrics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/metrics",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"metrics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/metrics",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"metrics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tweet Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8084/metrics",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8084",
+							"path": [
+								"metrics"
 							]
 						}
 					},

@@ -38,8 +38,7 @@ type TweetMutation struct {
 	content       *string
 	created_at    *time.Time
 	clearedFields map[string]struct{}
-	author        map[int64]struct{}
-	removedauthor map[int64]struct{}
+	author        *int64
 	clearedauthor bool
 	done          bool
 	oldValue      func(context.Context) (*Tweet, error)
@@ -222,14 +221,9 @@ func (m *TweetMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// AddAuthorIDs adds the "author" edge to the User entity by ids.
-func (m *TweetMutation) AddAuthorIDs(ids ...int64) {
-	if m.author == nil {
-		m.author = make(map[int64]struct{})
-	}
-	for i := range ids {
-		m.author[ids[i]] = struct{}{}
-	}
+// SetAuthorID sets the "author" edge to the User entity by id.
+func (m *TweetMutation) SetAuthorID(id int64) {
+	m.author = &id
 }
 
 // ClearAuthor clears the "author" edge to the User entity.
@@ -242,29 +236,20 @@ func (m *TweetMutation) AuthorCleared() bool {
 	return m.clearedauthor
 }
 
-// RemoveAuthorIDs removes the "author" edge to the User entity by IDs.
-func (m *TweetMutation) RemoveAuthorIDs(ids ...int64) {
-	if m.removedauthor == nil {
-		m.removedauthor = make(map[int64]struct{})
-	}
-	for i := range ids {
-		delete(m.author, ids[i])
-		m.removedauthor[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedAuthor returns the removed IDs of the "author" edge to the User entity.
-func (m *TweetMutation) RemovedAuthorIDs() (ids []int64) {
-	for id := range m.removedauthor {
-		ids = append(ids, id)
+// AuthorID returns the "author" edge ID in the mutation.
+func (m *TweetMutation) AuthorID() (id int64, exists bool) {
+	if m.author != nil {
+		return *m.author, true
 	}
 	return
 }
 
 // AuthorIDs returns the "author" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AuthorID instead. It exists only for internal usage by the builders.
 func (m *TweetMutation) AuthorIDs() (ids []int64) {
-	for id := range m.author {
-		ids = append(ids, id)
+	if id := m.author; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -273,7 +258,6 @@ func (m *TweetMutation) AuthorIDs() (ids []int64) {
 func (m *TweetMutation) ResetAuthor() {
 	m.author = nil
 	m.clearedauthor = false
-	m.removedauthor = nil
 }
 
 // Where appends a list predicates to the TweetMutation builder.
@@ -438,11 +422,9 @@ func (m *TweetMutation) AddedEdges() []string {
 func (m *TweetMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case tweet.EdgeAuthor:
-		ids := make([]ent.Value, 0, len(m.author))
-		for id := range m.author {
-			ids = append(ids, id)
+		if id := m.author; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	}
 	return nil
 }
@@ -450,23 +432,12 @@ func (m *TweetMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TweetMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.removedauthor != nil {
-		edges = append(edges, tweet.EdgeAuthor)
-	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *TweetMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case tweet.EdgeAuthor:
-		ids := make([]ent.Value, 0, len(m.removedauthor))
-		for id := range m.removedauthor {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
@@ -493,6 +464,9 @@ func (m *TweetMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *TweetMutation) ClearEdge(name string) error {
 	switch name {
+	case tweet.EdgeAuthor:
+		m.ClearAuthor()
+		return nil
 	}
 	return fmt.Errorf("unknown Tweet unique edge %s", name)
 }

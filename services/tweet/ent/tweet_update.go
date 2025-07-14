@@ -57,19 +57,15 @@ func (tu *TweetUpdate) SetNillableCreatedAt(t *time.Time) *TweetUpdate {
 	return tu
 }
 
-// AddAuthorIDs adds the "author" edge to the User entity by IDs.
-func (tu *TweetUpdate) AddAuthorIDs(ids ...int64) *TweetUpdate {
-	tu.mutation.AddAuthorIDs(ids...)
+// SetAuthorID sets the "author" edge to the User entity by ID.
+func (tu *TweetUpdate) SetAuthorID(id int64) *TweetUpdate {
+	tu.mutation.SetAuthorID(id)
 	return tu
 }
 
-// AddAuthor adds the "author" edges to the User entity.
-func (tu *TweetUpdate) AddAuthor(u ...*User) *TweetUpdate {
-	ids := make([]int64, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return tu.AddAuthorIDs(ids...)
+// SetAuthor sets the "author" edge to the User entity.
+func (tu *TweetUpdate) SetAuthor(u *User) *TweetUpdate {
+	return tu.SetAuthorID(u.ID)
 }
 
 // Mutation returns the TweetMutation object of the builder.
@@ -77,25 +73,10 @@ func (tu *TweetUpdate) Mutation() *TweetMutation {
 	return tu.mutation
 }
 
-// ClearAuthor clears all "author" edges to the User entity.
+// ClearAuthor clears the "author" edge to the User entity.
 func (tu *TweetUpdate) ClearAuthor() *TweetUpdate {
 	tu.mutation.ClearAuthor()
 	return tu
-}
-
-// RemoveAuthorIDs removes the "author" edge to User entities by IDs.
-func (tu *TweetUpdate) RemoveAuthorIDs(ids ...int64) *TweetUpdate {
-	tu.mutation.RemoveAuthorIDs(ids...)
-	return tu
-}
-
-// RemoveAuthor removes "author" edges to User entities.
-func (tu *TweetUpdate) RemoveAuthor(u ...*User) *TweetUpdate {
-	ids := make([]int64, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return tu.RemoveAuthorIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -132,6 +113,9 @@ func (tu *TweetUpdate) check() error {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Tweet.content": %w`, err)}
 		}
 	}
+	if tu.mutation.AuthorCleared() && len(tu.mutation.AuthorIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Tweet.author"`)
+	}
 	return nil
 }
 
@@ -155,39 +139,23 @@ func (tu *TweetUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if tu.mutation.AuthorCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
+			Columns: []string{tweet.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := tu.mutation.RemovedAuthorIDs(); len(nodes) > 0 && !tu.mutation.AuthorCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := tu.mutation.AuthorIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
+			Columns: []string{tweet.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
@@ -246,19 +214,15 @@ func (tuo *TweetUpdateOne) SetNillableCreatedAt(t *time.Time) *TweetUpdateOne {
 	return tuo
 }
 
-// AddAuthorIDs adds the "author" edge to the User entity by IDs.
-func (tuo *TweetUpdateOne) AddAuthorIDs(ids ...int64) *TweetUpdateOne {
-	tuo.mutation.AddAuthorIDs(ids...)
+// SetAuthorID sets the "author" edge to the User entity by ID.
+func (tuo *TweetUpdateOne) SetAuthorID(id int64) *TweetUpdateOne {
+	tuo.mutation.SetAuthorID(id)
 	return tuo
 }
 
-// AddAuthor adds the "author" edges to the User entity.
-func (tuo *TweetUpdateOne) AddAuthor(u ...*User) *TweetUpdateOne {
-	ids := make([]int64, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return tuo.AddAuthorIDs(ids...)
+// SetAuthor sets the "author" edge to the User entity.
+func (tuo *TweetUpdateOne) SetAuthor(u *User) *TweetUpdateOne {
+	return tuo.SetAuthorID(u.ID)
 }
 
 // Mutation returns the TweetMutation object of the builder.
@@ -266,25 +230,10 @@ func (tuo *TweetUpdateOne) Mutation() *TweetMutation {
 	return tuo.mutation
 }
 
-// ClearAuthor clears all "author" edges to the User entity.
+// ClearAuthor clears the "author" edge to the User entity.
 func (tuo *TweetUpdateOne) ClearAuthor() *TweetUpdateOne {
 	tuo.mutation.ClearAuthor()
 	return tuo
-}
-
-// RemoveAuthorIDs removes the "author" edge to User entities by IDs.
-func (tuo *TweetUpdateOne) RemoveAuthorIDs(ids ...int64) *TweetUpdateOne {
-	tuo.mutation.RemoveAuthorIDs(ids...)
-	return tuo
-}
-
-// RemoveAuthor removes "author" edges to User entities.
-func (tuo *TweetUpdateOne) RemoveAuthor(u ...*User) *TweetUpdateOne {
-	ids := make([]int64, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return tuo.RemoveAuthorIDs(ids...)
 }
 
 // Where appends a list predicates to the TweetUpdate builder.
@@ -334,6 +283,9 @@ func (tuo *TweetUpdateOne) check() error {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Tweet.content": %w`, err)}
 		}
 	}
+	if tuo.mutation.AuthorCleared() && len(tuo.mutation.AuthorIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Tweet.author"`)
+	}
 	return nil
 }
 
@@ -374,39 +326,23 @@ func (tuo *TweetUpdateOne) sqlSave(ctx context.Context) (_node *Tweet, err error
 	}
 	if tuo.mutation.AuthorCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
+			Columns: []string{tweet.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := tuo.mutation.RemovedAuthorIDs(); len(nodes) > 0 && !tuo.mutation.AuthorCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := tuo.mutation.AuthorIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
+			Columns: []string{tweet.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),

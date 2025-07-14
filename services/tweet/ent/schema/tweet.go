@@ -35,6 +35,7 @@ func (Tweet) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("author", User.Type).
 			Ref("tweets").
-			Required(),
+			Required().
+			Unique(),
 	}
 }

@@ -13,12 +13,21 @@ var (
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "content", Type: field.TypeString, Size: 280},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "user_tweets", Type: field.TypeInt64},
 	}
 	// TweetsTable holds the schema information for the "tweets" table.
 	TweetsTable = &schema.Table{
 		Name:       "tweets",
 		Columns:    TweetsColumns,
 		PrimaryKey: []*schema.Column{TweetsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "tweets_users_tweets",
+				Columns:    []*schema.Column{TweetsColumns[3]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -31,40 +40,13 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
-	// UserTweetsColumns holds the columns for the "user_tweets" table.
-	UserTweetsColumns = []*schema.Column{
-		{Name: "user_id", Type: field.TypeInt64},
-		{Name: "tweet_id", Type: field.TypeInt64},
-	}
-	// UserTweetsTable holds the schema information for the "user_tweets" table.
-	UserTweetsTable = &schema.Table{
-		Name:       "user_tweets",
-		Columns:    UserTweetsColumns,
-		PrimaryKey: []*schema.Column{UserTweetsColumns[0], UserTweetsColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "user_tweets_user_id",
-				Columns:    []*schema.Column{UserTweetsColumns[0]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "user_tweets_tweet_id",
-				Columns:    []*schema.Column{UserTweetsColumns[1]},
-				RefColumns: []*schema.Column{TweetsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		TweetsTable,
 		UsersTable,
-		UserTweetsTable,
 	}
 )
 
 func init() {
-	UserTweetsTable.ForeignKeys[0].RefTable = UsersTable
-	UserTweetsTable.ForeignKeys[1].RefTable = TweetsTable
+	TweetsTable.ForeignKeys[0].RefTable = UsersTable
 }

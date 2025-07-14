@@ -47,19 +47,15 @@ func (tc *TweetCreate) SetID(i int64) *TweetCreate {
 	return tc
 }
 
-// AddAuthorIDs adds the "author" edge to the User entity by IDs.
-func (tc *TweetCreate) AddAuthorIDs(ids ...int64) *TweetCreate {
-	tc.mutation.AddAuthorIDs(ids...)
+// SetAuthorID sets the "author" edge to the User entity by ID.
+func (tc *TweetCreate) SetAuthorID(id int64) *TweetCreate {
+	tc.mutation.SetAuthorID(id)
 	return tc
 }
 
-// AddAuthor adds the "author" edges to the User entity.
-func (tc *TweetCreate) AddAuthor(u ...*User) *TweetCreate {
-	ids := make([]int64, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return tc.AddAuthorIDs(ids...)
+// SetAuthor sets the "author" edge to the User entity.
+func (tc *TweetCreate) SetAuthor(u *User) *TweetCreate {
+	return tc.SetAuthorID(u.ID)
 }
 
 // Mutation returns the TweetMutation object of the builder.
@@ -166,10 +162,10 @@ func (tc *TweetCreate) createSpec() (*Tweet, *sqlgraph.CreateSpec) {
 	}
 	if nodes := tc.mutation.AuthorIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   tweet.AuthorTable,
-			Columns: tweet.AuthorPrimaryKey,
+			Columns: []string{tweet.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
@@ -178,6 +174,7 @@ func (tc *TweetCreate) createSpec() (*Tweet, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.user_tweets = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -323,7 +323,7 @@ func (c *TweetClient) QueryAuthor(t *Tweet) *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(tweet.Table, tweet.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, tweet.AuthorTable, tweet.AuthorPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, tweet.AuthorTable, tweet.AuthorColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil
@@ -472,7 +472,7 @@ func (c *UserClient) QueryTweets(u *User) *TweetQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(tweet.Table, tweet.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, user.TweetsTable, user.TweetsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TweetsTable, user.TweetsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/Drivello/Twittah/services/tweet/ent/tweet"
+	"github.com/Drivello/Twittah/services/tweet/ent/user"
 )
 
 // Tweet is the model entity for the Tweet schema.
@@ -24,23 +25,26 @@ type Tweet struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TweetQuery when eager-loading is set.
 	Edges        TweetEdges `json:"edges"`
+	user_tweets  *int64
 	selectValues sql.SelectValues
 }
 
 // TweetEdges holds the relations/edges for other nodes in the graph.
 type TweetEdges struct {
 	// Author holds the value of the author edge.
-	Author []*User `json:"author,omitempty"`
+	Author *User `json:"author,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
 // AuthorOrErr returns the Author value or an error if the edge
-// was not loaded in eager-loading.
-func (e TweetEdges) AuthorOrErr() ([]*User, error) {
-	if e.loadedTypes[0] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TweetEdges) AuthorOrErr() (*User, error) {
+	if e.Author != nil {
 		return e.Author, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "author"}
 }
@@ -56,6 +60,8 @@ func (*Tweet) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case tweet.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
+		case tweet.ForeignKeys[0]: // user_tweets
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -88,6 +94,13 @@ func (t *Tweet) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				t.CreatedAt = value.Time
+			}
+		case tweet.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field user_tweets", value)
+			} else if value.Valid {
+				t.user_tweets = new(int64)
+				*t.user_tweets = int64(value.Int64)
 			}
 		default:
 			t.selectValues.Set(columns[i], values[i])

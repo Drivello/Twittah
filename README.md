@@ -77,7 +77,7 @@ make all-up
 
 ### 4️⃣ Access Postman Collections
 
-Use this Postman Collection: [Postman Collection](Twittah_Gateway.postman_collection.json)
+Use this Postman Collection: [Postman Collection](Twittah.postman_collection.json)
 
 ### 5️⃣ Access Grafana (metrics)
 

@@ -18,11 +18,13 @@ const (
 	EdgeTweets = "tweets"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// TweetsTable is the table that holds the tweets relation/edge. The primary key declared below.
-	TweetsTable = "user_tweets"
+	// TweetsTable is the table that holds the tweets relation/edge.
+	TweetsTable = "tweets"
 	// TweetsInverseTable is the table name for the Tweet entity.
 	// It exists in this package in order to avoid circular dependency with the "tweet" package.
 	TweetsInverseTable = "tweets"
+	// TweetsColumn is the table column denoting the tweets relation/edge.
+	TweetsColumn = "user_tweets"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -30,12 +32,6 @@ var Columns = []string{
 	FieldID,
 	FieldUsername,
 }
-
-var (
-	// TweetsPrimaryKey and TweetsColumn2 are the table columns denoting the
-	// primary key for the tweets relation (M2M).
-	TweetsPrimaryKey = []string{"user_id", "tweet_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -84,6 +80,6 @@ func newTweetsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TweetsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, TweetsTable, TweetsPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.O2M, false, TweetsTable, TweetsColumn),
 	)
 }

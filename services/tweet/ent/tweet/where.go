@@ -175,7 +175,7 @@ func HasAuthor() predicate.Tweet {
 	return predicate.Tweet(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, AuthorTable, AuthorPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

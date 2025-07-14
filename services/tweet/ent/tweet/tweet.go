@@ -22,11 +22,13 @@ const (
 	EdgeAuthor = "author"
 	// Table holds the table name of the tweet in the database.
 	Table = "tweets"
-	// AuthorTable is the table that holds the author relation/edge. The primary key declared below.
-	AuthorTable = "user_tweets"
+	// AuthorTable is the table that holds the author relation/edge.
+	AuthorTable = "tweets"
 	// AuthorInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	AuthorInverseTable = "users"
+	// AuthorColumn is the table column denoting the author relation/edge.
+	AuthorColumn = "user_tweets"
 )
 
 // Columns holds all SQL columns for tweet fields.
@@ -36,16 +38,21 @@ var Columns = []string{
 	FieldCreatedAt,
 }
 
-var (
-	// AuthorPrimaryKey and AuthorColumn2 are the table columns denoting the
-	// primary key for the author relation (M2M).
-	AuthorPrimaryKey = []string{"user_id", "tweet_id"}
-)
+// ForeignKeys holds the SQL foreign-keys that are owned by the "tweets"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"user_tweets",
+}
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -79,23 +86,16 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
 }
 
-// ByAuthorCount orders the results by author count.
-func ByAuthorCount(opts ...sql.OrderTermOption) OrderOption {
+// ByAuthorField orders the results by author field.
+func ByAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newAuthorStep(), opts...)
-	}
-}
-
-// ByAuthor orders the results by author terms.
-func ByAuthor(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAuthorStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newAuthorStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newAuthorStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AuthorInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, AuthorTable, AuthorPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
 	)
 }

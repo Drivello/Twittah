@@ -23,7 +23,7 @@ func NewTweetRepository(client *ent.Client) *TweetRepository {
 func (r *TweetRepository) Save(t *domain.Tweet) error {
 	common.Logger().Debug("[TweetRepository] Save called", zap.Any("tweet", t))
 	_, err := r.Client.Tweet.Create().
-		AddAuthorIDs(t.AuthorID).
+		SetAuthorID(t.AuthorID).
 		SetContent(t.Content).
 		SetCreatedAt(time.Now()).
 		Save(context.Background())
@@ -37,13 +37,17 @@ func (r *TweetRepository) Delete(tweetID int64) error {
 
 func (r *TweetRepository) FindByID(tweetID int64) (*domain.Tweet, error) {
 	common.Logger().Debug("[TweetRepository] FindByID called", zap.Int64("tweet_id", tweetID))
-	tweet, err := r.Client.Tweet.Get(context.Background(), tweetID)
+	tweet, err := r.Client.Tweet.
+		Query().
+		Where(tweetEnt.ID(tweetID)).
+		WithAuthor().
+		Only(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	return &domain.Tweet{
 		ID:        tweet.ID,
-		AuthorID:  tweet.Edges.Author[0].ID,
+		AuthorID:  tweet.Edges.Author.ID,
 		Content:   tweet.Content,
 		CreatedAt: tweet.CreatedAt.Unix(),
 	}, nil
@@ -62,13 +66,9 @@ func (r *TweetRepository) FindAllByUserID(userID int64) ([]*domain.Tweet, error)
 
 	var domainTweets []*domain.Tweet
 	for _, tweet := range tweets {
-		var authorID int64
-		if len(tweet.Edges.Author) > 0 {
-			authorID = tweet.Edges.Author[0].ID
-		}
 		domainTweets = append(domainTweets, &domain.Tweet{
 			ID:        tweet.ID,
-			AuthorID:  authorID,
+			AuthorID:  tweet.Edges.Author.ID,
 			Content:   tweet.Content,
 			CreatedAt: tweet.CreatedAt.Unix(),
 		})
@@ -90,13 +90,9 @@ func (r *TweetRepository) FindAllByMultipleUserIDs(userIDs []int64) ([]*domain.T
 
 	var domainTweets []*domain.Tweet
 	for _, tweet := range tweets {
-		var authorID int64
-		if len(tweet.Edges.Author) > 0 {
-			authorID = tweet.Edges.Author[0].ID
-		}
 		domainTweets = append(domainTweets, &domain.Tweet{
 			ID:        tweet.ID,
-			AuthorID:  authorID,
+			AuthorID:  tweet.Edges.Author.ID,
 			Content:   tweet.Content,
 			CreatedAt: tweet.CreatedAt.Unix(),
 		})
