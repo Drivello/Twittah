@@ -57,7 +57,6 @@ services:
       - "5435:5432"
     volumes:
     - pgdata-auth:/var/lib/postgresql/data
-    - ./scripts/auth/auth-init.sql:/docker-entrypoint-initdb.d/auth-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U auth"]
       interval: 5s
@@ -74,7 +73,6 @@ services:
       - "5434:5432"
     volumes:
       - pgdata-user:/var/lib/postgresql/data
-      - ./scripts/user/user-init.sql:/docker-entrypoint-initdb.d/user-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user"]
       interval: 5s
@@ -91,7 +89,6 @@ services:
       - "5433:5432"
     volumes:
       - pgdata-tweet:/var/lib/postgresql/data
-      - ./scripts/tweet/tweet-init.sql:/docker-entrypoint-initdb.d/tweet-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tweet"]
       interval: 5s
