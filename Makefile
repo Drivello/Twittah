@@ -22,7 +22,7 @@ test:
 
 lint:
 	@if ! command -v golangci-lint > /dev/null; then \
-		echo "golangci-lint no esta instalado. Instalando..."; \
+		echo "golangci-lint not installed. Installing..."; \
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
 		export PATH=$$PATH:$$HOME/go/bin; \
 	fi
@@ -42,7 +42,7 @@ tidy:
 envs:
 	@for service in $(SERVICES); do \
 		if [ ! -f "$(SERVICES_DIR)/$$service/.env" ]; then \
-			echo "Creando .env vacío para $$service..."; \
+			echo "Creating empty .env for $$service..."; \
 				touch "$(SERVICES_DIR)/$$service/.env"; \
 		fi \
 	done
@@ -54,4 +54,4 @@ docker-compose:
 	docker-compose up
 
 all-up: envs tidy build test lint run
-	@echo "✅ Proyecto compilado, testeado, linter OK y contenedores corriendo 🚀"
+	@echo "✅ Project compiled, tested, lint OK and containers running 🚀"
