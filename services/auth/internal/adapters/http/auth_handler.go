@@ -1,6 +1,9 @@
 package http
 
 import (
+	"net/http"
+
+	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +28,14 @@ func (h *AuthHandler) RegisterRoutes(r *gin.Engine) {
 // It should be replaced with real validation logic.
 // c: Gin context for the HTTP request.
 func (h *AuthHandler) Validate(c *gin.Context) {
+	userID := c.GetHeader("X-User-Id")
+
+	userIDInt, err := common.ValidatePositiveIntString(userID)
+	if err != nil || userIDInt <= 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "X-User-Id header required"})
+		return
+	}
+
 	resp := ValidateResponseDTO{Status: "OK"}
 	c.JSON(200, resp)
 }

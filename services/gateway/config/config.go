@@ -15,6 +15,7 @@ type GatewayConfig struct {
 	KafkaUserTopic       string
 	KafkaTweetTopic      string
 	LogLevel             string
+	AuthMicroserviceURL  string
 	UserMicroserviceURL  string
 	TweetMicroserviceURL string
 }
@@ -38,6 +39,7 @@ func LoadConfig() (*GatewayConfig, error) {
 	// Microservices
 	userMicroserviceURL := mustGetEnv("USER_MICROSERVICE_URL")
 	tweetMicroserviceURL := mustGetEnv("TWEET_MICROSERVICE_URL")
+	authMicroserviceURL := mustGetEnv("AUTH_MICROSERVICE_URL")
 
 	return &GatewayConfig{
 		Port:                 port,
@@ -46,6 +48,7 @@ func LoadConfig() (*GatewayConfig, error) {
 		KafkaUserTopic:       userTopic,
 		KafkaTweetTopic:      tweetTopic,
 		LogLevel:             logLevel,
+		AuthMicroserviceURL:  authMicroserviceURL,
 		UserMicroserviceURL:  userMicroserviceURL,
 		TweetMicroserviceURL: tweetMicroserviceURL,
 	}, nil

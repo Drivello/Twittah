@@ -11,6 +11,7 @@ import (
 	adapters "github.com/Drivello/Twittah/services/gateway/internal/adapters"
 	gwhttp "github.com/Drivello/Twittah/services/gateway/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
+	"github.com/Drivello/Twittah/services/gateway/internal/middleware"
 	"github.com/Drivello/Twittah/services/gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -57,6 +58,10 @@ func main() {
 	tweetQueryHandler := gwhttp.NewTweetQueryHandler(getTimelineUseCase, getTweetsFromMultipleUserIDsUseCase, getUserTweetsUseCase)
 
 	r := gin.Default()
+
+	// Middleware de autenticación global
+	r.Use(middleware.AuthMiddleware(cfg.AuthMicroserviceURL))
+
 	userQueryHandler.RegisterRoutes(r.Group("/api"))
 
 	authGroup := r.Group("/auth")
