@@ -10,11 +10,13 @@ import (
 )
 
 type DeleteTweetUsecase struct {
-	repo ports.TweetRepository
+	repo          ports.TweetRepository
+	userService   ports.UserServicePort
+	timelineCache ports.TimelineCachePort
 }
 
-func NewDeleteTweetUsecase(repo ports.TweetRepository) *DeleteTweetUsecase {
-	return &DeleteTweetUsecase{repo: repo}
+func NewDeleteTweetUsecase(repo ports.TweetRepository, userService ports.UserServicePort, timelineCache ports.TimelineCachePort) *DeleteTweetUsecase {
+	return &DeleteTweetUsecase{repo: repo, userService: userService, timelineCache: timelineCache}
 }
 
 func (uc *DeleteTweetUsecase) Execute(ctx context.Context, tweetID int64) error {
@@ -23,5 +25,25 @@ func (uc *DeleteTweetUsecase) Execute(ctx context.Context, tweetID int64) error 
 		return fmt.Errorf("tweet id must be greater than zero")
 	}
 
-	return uc.repo.Delete(tweetID)
+	err := uc.repo.Delete(tweetID)
+
+	if err != nil {
+		return err
+	}
+
+	tweet, err := uc.repo.FindByID(tweetID)
+	if err != nil {
+		return err
+	}
+
+	followers, err := uc.userService.GetFollowers(ctx, tweet.AuthorID)
+	if err != nil {
+		common.Logger().Warnf("No se pudo obtener seguidores para invalidar cache: %v", err)
+	} else {
+		for _, follower := range followers {
+			_ = uc.timelineCache.InvalidateTimeline(ctx, fmt.Sprintf("%d", follower.ID))
+		}
+	}
+	_ = uc.timelineCache.InvalidateTimeline(ctx, fmt.Sprintf("%d", tweet.AuthorID))
+	return nil
 }

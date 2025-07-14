@@ -43,13 +43,14 @@ func main() {
 	tweetRepo := postgres.NewTweetRepository(entClient)
 	userRepo := postgres.NewUserRepository(entClient)
 
-	// Event Usecases
-	createUserUC := usecase.NewCreateUserUsecase(userRepo)
-	createTweetUC := usecase.NewCreateTweetUsecase(tweetRepo)
-	deleteTweetUC := usecase.NewDeleteTweetUsecase(tweetRepo)
 	// Redis Timeline Cache
 	redisClient := redisadapter.NewRedisClient(cfg.RedisAddr)
 	timelineCache := redisadapter.NewTimelineCache(redisClient, cfg.RedisTimelineTTLHours)
+
+	// Event Usecases
+	createUserUC := usecase.NewCreateUserUsecase(userRepo)
+	createTweetUC := usecase.NewCreateTweetUsecase(tweetRepo, userService, timelineCache)
+	deleteTweetUC := usecase.NewDeleteTweetUsecase(tweetRepo, userService, timelineCache)
 
 	getTimelineUC := usecase.NewGetTimelineUseCase(tweetRepo, userService, timelineCache)
 	getTweetsFromMultipleUserIDsUC := usecase.NewGetTweetsFromMultipleUserIDsUsecase(tweetRepo)

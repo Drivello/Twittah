@@ -35,6 +35,20 @@ func (r *TweetRepository) Delete(tweetID int64) error {
 	return r.Client.Tweet.DeleteOneID(tweetID).Exec(context.Background())
 }
 
+func (r *TweetRepository) FindByID(tweetID int64) (*domain.Tweet, error) {
+	common.Logger().Debug("[TweetRepository] FindByID called", zap.Int64("tweet_id", tweetID))
+	tweet, err := r.Client.Tweet.Get(context.Background(), tweetID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.Tweet{
+		ID:        tweet.ID,
+		AuthorID:  tweet.Edges.Author[0].ID,
+		Content:   tweet.Content,
+		CreatedAt: tweet.CreatedAt.Unix(),
+	}, nil
+}
+
 func (r *TweetRepository) FindAllByUserID(userID int64) ([]*domain.Tweet, error) {
 	common.Logger().Debug("[TweetRepository] FindAllByUserID called", zap.Int64("user_id", userID))
 	tweets, err := r.Client.Tweet.
@@ -47,10 +61,10 @@ func (r *TweetRepository) FindAllByUserID(userID int64) ([]*domain.Tweet, error)
 	}
 
 	var domainTweets []*domain.Tweet
-	for i, tweet := range tweets {
+	for _, tweet := range tweets {
 		var authorID int64
-		if tweet.Edges.Author != nil {
-			authorID = tweet.Edges.Author[i].ID
+		if len(tweet.Edges.Author) > 0 {
+			authorID = tweet.Edges.Author[0].ID
 		}
 		domainTweets = append(domainTweets, &domain.Tweet{
 			ID:        tweet.ID,
@@ -75,10 +89,10 @@ func (r *TweetRepository) FindAllByMultipleUserIDs(userIDs []int64) ([]*domain.T
 	}
 
 	var domainTweets []*domain.Tweet
-	for i, tweet := range tweets {
+	for _, tweet := range tweets {
 		var authorID int64
-		if tweet.Edges.Author != nil {
-			authorID = tweet.Edges.Author[i].ID
+		if len(tweet.Edges.Author) > 0 {
+			authorID = tweet.Edges.Author[0].ID
 		}
 		domainTweets = append(domainTweets, &domain.Tweet{
 			ID:        tweet.ID,

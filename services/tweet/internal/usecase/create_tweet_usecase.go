@@ -11,11 +11,13 @@ import (
 )
 
 type CreateTweetUsecase struct {
-	repo ports.TweetRepository
+	repo          ports.TweetRepository
+	userService   ports.UserServicePort
+	timelineCache ports.TimelineCachePort
 }
 
-func NewCreateTweetUsecase(repo ports.TweetRepository) *CreateTweetUsecase {
-	return &CreateTweetUsecase{repo: repo}
+func NewCreateTweetUsecase(repo ports.TweetRepository, userService ports.UserServicePort, timelineCache ports.TimelineCachePort) *CreateTweetUsecase {
+	return &CreateTweetUsecase{repo: repo, userService: userService, timelineCache: timelineCache}
 }
 
 func (uc *CreateTweetUsecase) Execute(ctx context.Context, tweet *domain.Tweet) error {
@@ -26,5 +28,19 @@ func (uc *CreateTweetUsecase) Execute(ctx context.Context, tweet *domain.Tweet) 
 	if tweet.AuthorID <= 0 {
 		return fmt.Errorf("tweet author id must be greater than zero")
 	}
-	return uc.repo.Save(tweet)
+	err := uc.repo.Save(tweet)
+	if err != nil {
+		return err
+	}
+
+	followers, err := uc.userService.GetFollowers(ctx, tweet.AuthorID)
+	if err != nil {
+		common.Logger().Warnf("No se pudo obtener seguidores para invalidar cache: %v", err)
+	} else {
+		for _, follower := range followers {
+			_ = uc.timelineCache.InvalidateTimeline(ctx, fmt.Sprintf("%d", follower.ID))
+		}
+	}
+	_ = uc.timelineCache.InvalidateTimeline(ctx, fmt.Sprintf("%d", tweet.AuthorID))
+	return nil
 }
