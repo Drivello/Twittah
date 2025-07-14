@@ -14,8 +14,9 @@ type Config struct {
 	UserServiceURL string
 
 	// Database
-	PostgresDSN string
-	RedisAddr   string
+	PostgresDSN           string
+	RedisAddr             string
+	RedisTimelineTTLHours int
 
 	// Kafka
 	KafkaBrokers []string
@@ -35,6 +36,7 @@ func LoadConfig() *Config {
 	// Database
 	postgresDSN := mustGetEnv("TWEET_POSTGRES_DSN")
 	redisAddr := mustGetEnv("TWEET_REDIS_ADDR")
+	redisTimelineTTL := getEnvAsInt("TIMELINE_TTL_HOURS", 24)
 
 	// Services
 	userServiceUrl := mustGetEnv("USER_MICROSERVICE_URL")
@@ -85,6 +87,7 @@ func LoadConfig() *Config {
 		UserServiceURL:           userServiceUrl,
 		PostgresDSN:              postgresDSN,
 		RedisAddr:                redisAddr,
+		RedisTimelineTTLHours:    redisTimelineTTL,
 		KafkaBrokers:             brokers,
 		KafkaUserConsumerConfig:  kafkaUserConsumerConfig,
 		KafkaTweetConsumerConfig: kafkaTweetConsumerConfig,

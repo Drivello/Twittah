@@ -2,11 +2,25 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
 	"go.uber.org/zap"
 )
+
+// getEnvAsInt obtiene una variable de entorno como int, o retorna el default si no existe o es inválido.
+func getEnvAsInt(key string, defaultVal int) int {
+	valStr := getEnvOrDefault(key, "")
+	if valStr == "" {
+		return defaultVal
+	}
+	val, err := strconv.Atoi(valStr)
+	if err != nil {
+		return defaultVal
+	}
+	return val
+}
 
 // GetEnvAsDuration parses an environment variable as a time.Duration or returns the default.
 func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {

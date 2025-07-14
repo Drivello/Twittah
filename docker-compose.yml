@@ -224,6 +224,7 @@ services:
       # --- Database ---
       - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
       - TWEET_REDIS_ADDR=redis-tweet:6379
+      - TIMELINE_TTL_HOURS=24
 
       # --- Kafka ---
       - KAFKA_BROKERS=kafka:9092

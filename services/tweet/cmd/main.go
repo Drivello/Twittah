@@ -9,6 +9,7 @@ import (
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/http"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/postgres"
+	redisadapter "github.com/Drivello/Twittah/services/tweet/internal/adapters/redis"
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
 	"github.com/Drivello/Twittah/services/tweet/internal/usecase"
 
@@ -42,7 +43,11 @@ func main() {
 	createUserUC := usecase.NewCreateUserUsecase(userRepo)
 	createTweetUC := usecase.NewCreateTweetUsecase(tweetRepo)
 	deleteTweetUC := usecase.NewDeleteTweetUsecase(tweetRepo)
-	getTimelineUC := usecase.NewGetTimelineUseCase(tweetRepo, userService)
+	// Redis Timeline Cache
+	redisClient := redisadapter.NewRedisClient(cfg.RedisAddr)
+	timelineCache := redisadapter.NewTimelineCache(redisClient, cfg.RedisTimelineTTLHours)
+
+	getTimelineUC := usecase.NewGetTimelineUseCase(tweetRepo, userService, timelineCache)
 	getTweetsFromMultipleUserIDsUC := usecase.NewGetTweetsFromMultipleUserIDsUsecase(tweetRepo)
 	getUserTweetsUC := usecase.NewGetUserTweetsUsecase(tweetRepo)
 
