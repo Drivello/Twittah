@@ -1,6 +1,6 @@
 module github.com/Drivello/Twittah/services/gateway
 
-go 1.23.5
+go 1.23.0
 
 require (
 	github.com/IBM/sarama v1.45.2
