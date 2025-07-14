@@ -28,7 +28,11 @@ func main() {
 	}
 	common.InitLogger(logLevel)
 	logger := common.Logger()
-	defer logger.Sync()
+	defer func() {
+	if err := logger.Sync(); err != nil {
+		logger.Error("Failed to sync logger", zap.Error(err))
+	}
+}()
 
 	// Load config
 	cfg := config.LoadConfig()

@@ -18,10 +18,10 @@ import (
 
 func newTestServer(status int, body interface{}) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(status)
+		w.WriteHeader(status) // no error to check
 		if body != nil {
 			b, _ := json.Marshal(body)
-			w.Write(b)
+			_, _ = w.Write(b)
 		}
 	}))
 }
@@ -72,7 +72,7 @@ func TestGetTimeline_DecodeError(t *testing.T) {
 	// arrange
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("{invalid-json"))
+		_, _ = w.Write([]byte("{invalid-json"))
 	}))
 	defer shutdown(ts)
 	adapter := adapters.NewTweetServiceHTTPAdapter(ts.URL)
@@ -166,7 +166,7 @@ func TestGetTweetsFromUserID_DecodeError(t *testing.T) {
 	// arrange
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		io.WriteString(w, "not-json")
+		_, _ = io.WriteString(w, "not-json")
 	}))
 	defer shutdown(ts)
 	adapter := adapters.NewTweetServiceHTTPAdapter(ts.URL)
@@ -260,7 +260,7 @@ func TestGetTweetsFromMultipleUserIDs_DecodeError(t *testing.T) {
 	// arrange
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("broken"))
+		_, _ = w.Write([]byte("broken"))
 	}))
 	defer shutdown(ts)
 	adapter := adapters.NewTweetServiceHTTPAdapter(ts.URL)

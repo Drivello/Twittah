@@ -23,7 +23,11 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 	common.InitLogger(cfg.LogLevel)
-	defer common.Logger().Sync()
+	defer func() {
+	if err := common.Logger().Sync(); err != nil {
+		common.Logger().Error("Failed to sync logger", zap.Error(err))
+	}
+}()
 
 	// Inicializar Ent (Postgres)
 	entClient, err := config.InitEntClient(cfg.PostgresDSN)

@@ -52,10 +52,11 @@ func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.
 
 		// Execute handler
 		ctx, cancel := context.WithTimeout(sess.Context(), w.Config.RetryConfig.MaxRetryDuration)
-		defer cancel()
 
 		err := w.kafkaEventDispatcher.Dispatch(ctx, msg.Value)
 		if err != nil {
+			cancel()
+
 			common.Logger().Error("[DLQWorker] Failed to process DLQ message, discarding",
 				zap.Error(err.Error))
 		} else {

@@ -70,8 +70,5 @@ func IsValidPassword(password string) bool {
 	}
 	// At least one special character
 	hasSpecial, _ := regexp.MatchString(`[^a-zA-Z0-9]`, password)
-	if !hasSpecial {
-		return false
-	}
-	return true
+	return hasSpecial
 }

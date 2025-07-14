@@ -15,10 +15,10 @@ import (
 
 func newUserFollowersTestServer(status int, body interface{}) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(status)
+		w.WriteHeader(status) // no error to check
 		if body != nil {
 			b, _ := json.Marshal(body)
-			w.Write(b)
+			_, _ = w.Write(b)
 		}
 	}))
 }
@@ -64,8 +64,8 @@ func TestGetFollowers_NonOKStatus(t *testing.T) {
 func TestGetFollowers_DecodeError(t *testing.T) {
 	// arrange
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		io.WriteString(w, "{not-json")
+		w.WriteHeader(200) // no error to check
+		_, _ = io.WriteString(w, "{not-json")
 	}))
 	defer shutdown(ts)
 	adapter := adapters.NewUserServiceHTTPAdapter(ts.URL)

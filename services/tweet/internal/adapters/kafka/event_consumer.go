@@ -65,7 +65,6 @@ func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 		var req KafkaEventRequest
 
 		ctx, cancel := context.WithTimeout(sess.Context(), c.Config.RetryConfig.MaxRetryDuration)
-		defer cancel()
 
 		err := c.WorkQueue.Submit(common.WorkItem{
 			Ctx:     ctx,
@@ -81,10 +80,9 @@ func (c *UserEventConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 				common.Logger().Error("Failed to send message to DLQ (queue full)", zap.Error(dlqErr))
 			}
 			sess.MarkMessage(msg, "")
-		} else {
-			common.Logger().Info("[UserEventConsumer] User event message processed successfully", zap.String("event_type", req.EventType))
 		}
-
+		cancel()
+		common.Logger().Info("[UserEventConsumer] User event message processed successfully", zap.String("event_type", req.EventType))
 		sess.MarkMessage(msg, "")
 	}
 	return nil

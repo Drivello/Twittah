@@ -73,7 +73,6 @@ func (c *AuthConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		var req KafkaEventRequest
 
 		ctx, cancel := context.WithTimeout(sess.Context(), c.Config.RetryConfig.MaxRetryDuration)
-		defer cancel()
 
 		err := c.WorkQueue.Submit(common.WorkItem{
 			Ctx:     ctx,
@@ -90,6 +89,7 @@ func (c *AuthConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 			}
 			sess.MarkMessage(msg, "")
 		}
+		cancel()
 	}
 	return nil
 }

@@ -28,7 +28,11 @@ func main() {
 		common.Logger().Fatal("failed to load config", zap.Error(err))
 	}
 	common.InitLogger(cfg.LogLevel)
-	defer common.Logger().Sync()
+	defer func() {
+	if err := common.Logger().Sync(); err != nil {
+		common.Logger().Error("Failed to sync logger", zap.Error(err))
+	}
+}()
 
 	authProducer, userProducer, tweetProducer, err := config.InitKafkaProducers(cfg)
 	if err != nil {
