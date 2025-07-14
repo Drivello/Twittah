@@ -39,20 +39,20 @@ func NewDLQWorker(producer ports.EventProducerPort, authUC ports.RegisterUserUse
 func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	common.Logger().Info("[DLQWorker] ConsumeClaim started for DLQ topic")
 	for msg := range claim.Messages() {
+		ctx, cancel := context.WithTimeout(sess.Context(), w.Config.RetryConfig.MaxRetryDuration)
 
 		// TTL check: skip old messages
 		if w.Config.DLQConfig.TTL > 0 {
 			msgAge := time.Since(msg.Timestamp)
-			if msgAge > w.Config.TTL {
-				common.Logger().Warn("[DLQWorker] Discarding DLQ message by TTL", zap.Duration("age", msgAge), zap.Duration("ttl", w.Config.TTL))
+			if msgAge > w.Config.DLQConfig.TTL {
+				common.Logger().Warn("[DLQWorker] Discarding DLQ message by TTL", zap.Duration("age", msgAge), zap.Duration("ttl", w.Config.DLQConfig.TTL))
 				sess.MarkMessage(msg, "")
+				cancel()
 				continue
 			}
 		}
 
 		// Execute handler
-		ctx, cancel := context.WithTimeout(sess.Context(), w.Config.RetryConfig.MaxRetryDuration)
-
 		err := w.kafkaEventDispatcher.Dispatch(ctx, msg.Value)
 		if err != nil {
 			cancel()
@@ -63,6 +63,7 @@ func (w *DLQWorker) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.
 			common.Logger().Info("[DLQWorker] DLQ message processed successfully")
 		}
 
+		cancel()
 		sess.MarkMessage(msg, "")
 	}
 	return nil
