@@ -57,8 +57,11 @@ cd twittah
 ```
 
 ### 3️⃣ Levantar el entorno completo
+
+choco install make
+
 ```bash
-docker-compose up --build
+make all-up
 ```
 👉 **Nota:** El `docker-compose.yml` fue ajustado para manejar dependencias como Kafka, PostgreSQL y Redis de forma automática.
 
