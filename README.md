@@ -1,32 +1,31 @@
-
 # 🐦 Twittah – Microservices Monorepo
 
-**Twittah** es un sistema de microblogging inspirado en Twitter. Este monorepo contiene todos los microservicios necesarios para permitir la creación de usuarios, publicación de tweets, seguimiento entre usuarios y la generación de timelines optimizados con Redis cache.
+**Twittah** is a microblogging system inspired by Twitter. This monorepo contains all microservices needed for user creation, tweet publishing, user following relationships, and optimized timelines using Redis cache.
 
-> 🚀 Diseñado para escalar a millones de usuarios con un enfoque en arquitectura limpia, resiliencia y observabilidad.
-
----
-
-## 📂 Contenido del monorepo
-
-| Servicio        | Descripción                                        |
-|------------------|----------------------------------------------------|
-| `auth`          | Autenticación y validación de usuarios             |
-| `user`          | Gestión de usuarios y relaciones follow/unfollow   |
-| `tweet`         | Gestión de tweets y timelines con caching          |
-| `gateway`       | Orquestador de llamadas entre microservicios       |
+> 🚀 Designed to scale to millions of users with a focus on clean architecture, resilience, and observability.
 
 ---
 
-## 🏛️ Arquitectura
+## 📂 Monorepo Contents
 
-- **Hexagonal (Ports & Adapters):** Cada servicio está desacoplado y preparado para ser testeable.
-- **Kafka:** Bus de eventos para comunicación asíncrona.
-- **PostgreSQL:** Persistencia por servicio (base de datos independiente).
-- **Redis:** Cache de timelines en `tweet` para mejorar tiempos de respuesta.
-- **Docker Compose:** Entorno de desarrollo local completo (👉 **RECOMENDADO: levantar todo con Docker Compose**).
-- **Go 1.23:** Lenguaje principal para todos los servicios.
-- **Ent ORM:** Toda la persistencia usa Ent, lo que da un modelo de datos fuertemente tipado y migraciones seguras. 💥
+| Service        | Description                                          |
+|----------------|------------------------------------------------------|
+| `auth`         | User authentication and validation                   |
+| `user`         | Manages users and follow/unfollow relationships      |
+| `tweet`        | Manages tweets and timelines with caching            |
+| `gateway`      | Orchestrates calls between microservices             |
+
+---
+
+## 🏛️ Architecture
+
+- **Hexagonal (Ports & Adapters):** Each service is decoupled and highly testable.
+- **Kafka:** Event bus for asynchronous communication.
+- **PostgreSQL:** Independent databases per service.
+- **Redis:** Timeline caching in `tweet` for faster response times.
+- **Docker Compose:** Full local development environment (👉 **RECOMMENDED: use Docker Compose**).
+- **Go 1.23:** Main language for all services.
+- **Ent ORM:** Strongly typed data models with safe migrations. 💥
 
 ```
                            +-----------+
@@ -46,41 +45,71 @@
 
 ## 🚀 Quick Start
 
-### 1️⃣ Prerrequisitos
-- Docker & Docker Compose (👉 **Imprescindible, todo el setup local fue pensado para Compose**)
+### 1️⃣ Prerequisites
+- Docker & Docker Compose (**Essential**, all setup is designed for Compose)
 - Go 1.23
 
-### 2️⃣ Clonar el repositorio
+### 2️⃣ Clone the repository
 ```bash
-git clone https://github.com/tuusuario/twittah.git
+git clone https://github.com/Drivello/Twittah.git
 cd twittah
 ```
 
-### 3️⃣ Levantar el entorno completo
+### 3️⃣ Start the full environment
 
+Make sure to have `make` installed. You can get it with:
+```bash
 choco install make
+```
 
+Run:
 ```bash
 make all-up
 ```
-👉 **Nota:** El `docker-compose.yml` fue ajustado para manejar dependencias como Kafka, PostgreSQL y Redis de forma automática.
+
+👉 **Note:** The `docker-compose.yml` automatically handles dependencies:
+- Kafka
+- PostgreSQL
+- Redis
+- Grafana
+- Prometheus
 
 
-### 4️⃣ Acceder a Postman Collections
+### 4️⃣ Access Postman Collections
 
-```bash
-cd Twittah_Gateway.postman_collection.json
-```
+Use this Postman Collection: [Postman Collection](Twittah_Gateway.postman_collection.json)
+
+### 5️⃣ Access Grafana (metrics)
+
+Go to: http://localhost:3000
+
+- user: admin
+- password: admin
+
+Create a new Prometheus Data Source at: 
+http://localhost:3000/connections/datasources
+
+Configure the Data Source: 
+- Name: Prometheus
+- URL: http://prometheus:9090
+
+Save & Test → Build Dashboard → Import Dashboard
+
+Drag and drop the dashboard JSON file
+
+[Dashboard.json](monitoring/grafana/twittah-dashboard.json)
+
+Enjoy!
 
 ---
 
 ## 🧪 Testing
 
-### Estado actual
-✅ Tests unitarios implementados en `gateway`.  
-⚠️ El resto de los servicios no tiene cobertura de tests aún (anotado como prioridad para próximas iteraciones).
+### Current status
+✅ Unit tests implemented in `gateway`.  
+⚠️ Other services have no test coverage yet (marked as a priority for upcoming iterations).
 
-### Ejecutar los tests disponibles
+### Run existing tests
 ```bash
 cd services/gateway
 go test -cover -count=1 ./...
@@ -90,103 +119,90 @@ go test -cover -count=1 ./...
 
 ## 📝 Logging
 
-El proyecto usa **logging estructurado con Uber Zap**.  
-El package `common.Logger` inicializa y expone un singleton para que todos los servicios utilicen la misma configuración de logging.
+The project uses **structured logging with Uber Zap**.  
 
 ---
 
-## 📦 Directorio principal
+## 📦 Main Directory Structure
 
 ```
 services/
 │
-├── auth/       # Microservicio de autenticación
-├── user/       # Microservicio de usuarios
-├── tweet/      # Microservicio de tweets
-├── gateway/    # Orquestador API
+├── auth/       # Authentication microservice 
+├── user/       # User management microservice
+├── tweet/      # Tweets and timeline microservice
+├── gateway/    # API orchestrator
 │
-common/         # Utilidades compartidas (logger, config, etc.)
 docker-compose.yml
 ```
 
 ---
 
-## 🛠️ Tecnologías clave
+## 🛠️ Key Technologies
 
-| Componente        | Tecnología                 |
-|--------------------|----------------------------|
-| Backend            | Go 1.23                    |
-| Comunicación       | Kafka (event-driven)       |
-| Persistencia       | PostgreSQL + Ent ORM 💥     |
-| Cache              | Redis                      |
-| Contenerización    | Docker & Docker Compose    |
-| Configuración      | Viper                      |
-
----
-
-## 📦 Flujo de datos simplificado
-
-1. Usuario envía request a `Gateway`.
-2. `Gateway` valida y orquesta peticiones a otros servicios.
-3. Eventos importantes son enviados por Kafka.
-4. Servicios reaccionan y actualizan su estado (DB o cache).
+| Component          | Technology               |
+|--------------------|---------------------------|
+| Backend            | Go 1.23                   |
+| Communication      | Kafka (event-driven)      |
+| Persistence        | PostgreSQL + Ent ORM      |
+| Cache              | Redis                     |
+| Containerization   | Docker & Docker Compose   |
+| Configuration      | Viper                     |
 
 ---
 
-## 🤝 Contribución
+## 📦 Simplified Data Flow
 
-1. Forkea el repositorio.
-2. Crea una rama (`feature/nueva-funcionalidad`).
-3. Haz commit de tus cambios.
-4. Abre un Pull Request.
-
----
-
-## 📬 Contacto
-
-**Nicolás Sánchez** – [LinkedIn](https://www.linkedin.com/in/mario-nahuel-nicolas-sanchez)  
-📧 nico_dd@outlook.com.ar
+1. User sends request to `Gateway`.
+2. `Gateway` validates and orchestrates calls to other services.
+3. Important events are sent via Kafka.
+4. Services react and update their state (DB or cache).
 
 ---
 
 ## 🏁 Roadmap (Post-MVP)
 
-### ✅ Calidad y pruebas
-- Añadir cobertura de tests a todos los microservicios (unitarios >70%, e2e en flujos criticos).
-- Mejorar los test existentes en Gateway para casos edge.
-- Mejorar los tipos de respuesta http ante errores.
-- Añadir tests de carga y estrés para validar escalabilidad.
-- Implementar circuit breaker para servicios externos.
+### ✅ Quality and Testing
+- Add test coverage to all microservices (unit >70%, e2e for critical flows).
+- Improve existing tests in Gateway for edge cases.
+- Better HTTP error responses.
+- Add load and stress tests for scalability validation.
+- Implement circuit breakers for external services.
 
-### 🔐 Seguridad
-- Implementar sistema de Login/Signup. 
-- Implementar sistema de autenticación con Bearer Tokens. 
+### 🔐 Security
+- Add Login/Signup system. 
+- Add authentication with Bearer Tokens.
 
 ### 🌐 API Gateway
-  - Anteponer Kong a Gateway para un escalado rápido.
-  - Rate limiting por usuario/IP.
-  - Logging de acceso centralizado.
-  - Validación de CORS.
-  - Microservicios en redes privadas, Gateway expuesto como unica entrada.
+  - Introduce Kong in front of Gateway for rapid scaling.
+  - Per-user/IP rate limiting.
+  - Centralized access logging.
+  - Microservices in private networks, Gateway as the only exposed entry point.
+  - CORS validation.
 
-### 📊 Observabilidad
-- Integrar Prometheus + Grafana para métricas y dashboards.
-- Añadir alertas (latencia alta, errores 5xx, caídas de Kafka/Redis).
-- Logs estructurados enriquecidos con tracing IDs.
+### 📊 Observability
+- Add alerts (high latency, 5xx errors, Kafka/Redis failures).
+- Enriched structured logs with tracing IDs.
 
-### 🚀 Escalabilidad y optimización
-- Implementar fan-out on write total en TweetService para distribuir tweets a timelines cacheados.
-- Cachear timelines paginados en Redis (`timeline:<user_id>:page:<n>`).
-- Usar prefetch y pipelining en Redis para reducir latencia en cache-miss.
-- Compresión de payloads Kafka (Snappy o LZ4).
-- Considerar sharding en PostgreSQL para TweetService si la carga lo requiere.
+### 🚀 Scalability and Optimization
+- Full fan-out on write in TweetService to distribute tweets to cached timelines.
+- Cache paginated timelines in Redis (`timeline:<user_id>:page:<n>`).
+- Use prefetch and pipelining in Redis to reduce cache-miss latency.
+- Kafka payload compression (Snappy or LZ4).
+- Consider PostgreSQL sharding in TweetService if required.
 
-### ☁️ Infraestructura y despliegue
-- Despliegue en AWS ECS o EKS con Helm charts.
-- Infraestructura como código (Terraform).
-- Añadir CI/CD completo con GitHub Actions o GitLab CI (build, lint, test, deploy a staging/prod).
+### ☁️ Infrastructure and Deployment
+- Deploy to AWS ECS or EKS using Helm charts.
+- Infrastructure as Code (Terraform).
+- Full CI/CD pipeline with GitHub Actions or GitLab CI (build, lint, test, deploy to staging/prod).
 
 ### 👨‍💻 Developer Experience
-- Añadir pre-commit hooks (validación de formato, lint, tests).
-- Documentación detallada por microservicio.
+- Add pre-commit hooks (formatting, linting, tests).
+- Detailed documentation per microservice.
 
+---
+
+## 📬 Contact
+
+**Nicolás Sánchez** – [LinkedIn](https://www.linkedin.com/in/mario-nahuel-nicolas-sanchez)  
+📧 nico_dd@outlook.com.ar

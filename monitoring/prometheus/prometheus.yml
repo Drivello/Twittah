@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8081']
+
+  - job_name: 'auth'
+    static_configs:
+      - targets: ['auth:8082']
+
+  - job_name: 'user'
+    static_configs:
+      - targets: ['user:8083']
+
+  - job_name: 'tweet'
+    static_configs:
+      - targets: ['tweet:8084']

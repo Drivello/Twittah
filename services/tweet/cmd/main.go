@@ -78,6 +78,7 @@ func main() {
 	// Inicializar Gin
 	r := gin.Default()
 
+	metrics.Init()
 	r.GET("/metrics", gin.WrapH(metrics.Handler()))
 
 	tweetGroup := r.Group("/")

@@ -1,0 +1,83 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "2.0.0" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "8.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "8.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 162,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "tweets_created_total", "legendFormat": "Tweets Creados", "refId": "A" },
+        { "expr": "tweets_deleted_total", "legendFormat": "Tweets Eliminados", "refId": "B" }
+      ],
+      "title": "Tweets Creados y Eliminados",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "tweets_created_error_total", "legendFormat": "Errores al crear", "refId": "A" },
+        { "expr": "tweets_deleted_error_total", "legendFormat": "Errores al eliminar", "refId": "B" }
+      ],
+      "title": "Errores de Tweets",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "tweets_timeline_cache_hits_total", "legendFormat": "Hits de Cache", "refId": "A" },
+        { "expr": "tweets_timeline_cache_misses_total", "legendFormat": "Misses de Cache", "refId": "B" }
+      ],
+      "title": "Cache Timeline (Hits/Misses)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "tweets_creation_consumed_total", "legendFormat": "Tweets Creados Cons. Kafka", "refId": "A" },
+        { "expr": "tweets_deletion_consumed_total", "legendFormat": "Tweets Eliminados Cons. Kafka", "refId": "B" }
+      ],
+      "title": "Consumo Kafka (Creación/Eliminación)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["twittah", "prometheus", "tweet"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Twittah - Tweet Service Metrics",
+  "uid": null,
+  "version": 1
+}

@@ -46,6 +46,10 @@ func (uc *GetTimelineUseCase) Execute(ctx context.Context, userID int64) ([]*dom
 	userIDs := make([]int64, len(following)+1)
 	userIDs[0] = userID
 	for i, u := range following {
+		if i+1 >= len(userIDs) {
+			common.Logger().Errorf("Index out of range: i+1=%d, len(userIDs)=%d, following=%v", i+1, len(userIDs), following)
+			break
+		}
 		userIDs[i+1] = u.ID
 	}
 	tweets, err := uc.repo.FindAllByMultipleUserIDs(userIDs)
