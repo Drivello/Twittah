@@ -120,6 +120,7 @@ services:
       - LOG_LEVEL=debug
 
       # --- Microservices ---
+      - AUTH_MICROSERVICE_URL=http://auth:8082
       - USER_MICROSERVICE_URL=http://user:8083
       - TWEET_MICROSERVICE_URL=http://tweet:8084
 
@@ -219,6 +220,7 @@ services:
       - LOG_LEVEL=debug
 
       # --- Microservices ---
+      - AUTH_MICROSERVICE_URL=http://auth:8082
       - USER_MICROSERVICE_URL=http://user:8083
 
       # --- Database ---
