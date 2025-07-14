@@ -153,20 +153,22 @@ docker-compose.yml
 ## 🏁 Roadmap (Post-MVP)
 
 ### ✅ Calidad y pruebas
-- Añadir cobertura de tests a todos los microservicios (unitarios >80%, integración y e2e).
+- Añadir cobertura de tests a todos los microservicios (unitarios >70%, e2e en flujos criticos).
 - Mejorar los test existentes en Gateway para casos edge.
+- Mejorar los tipos de respuesta http ante errores.
 - Añadir tests de carga y estrés para validar escalabilidad.
+- Implementar circuit breaker para servicios externos.
 
 ### 🔐 Seguridad
-- Implementar JWT completo en AuthService (login, refresh tokens, expiración, roles).
-- Añadir soporte para OAuth2 / OpenID Connect para integración con terceros.
-- Gestionar secrets con AWS Secrets Manager o HashiCorp Vault.
+- Implementar sistema de Login/Signup. 
+- Implementar sistema de autenticación con Bearer Tokens. 
 
 ### 🌐 API Gateway
-- Sustituir el gateway actual por Kong o Traefik.
+  - Anteponer Kong a Gateway para un escalado rápido.
   - Rate limiting por usuario/IP.
   - Logging de acceso centralizado.
-  - API keys y validación de CORS.
+  - Validación de CORS.
+  - Microservicios en redes privadas, Gateway expuesto como unica entrada.
 
 ### 📊 Observabilidad
 - Integrar Prometheus + Grafana para métricas y dashboards.
@@ -184,10 +186,8 @@ docker-compose.yml
 - Despliegue en AWS ECS o EKS con Helm charts.
 - Infraestructura como código (Terraform).
 - Añadir CI/CD completo con GitHub Actions o GitLab CI (build, lint, test, deploy a staging/prod).
-- Docker multi-stage builds para imágenes más livianas.
 
 ### 👨‍💻 Developer Experience
-- Mejorar Makefile con targets para lint, test, build y deploy.
 - Añadir pre-commit hooks (validación de formato, lint, tests).
 - Documentación detallada por microservicio.
 
