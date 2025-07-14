@@ -67,14 +67,15 @@ func main() {
 
 	// Worker pool
 	workQueue := common.NewWorkQueue(true)
+	kafkaEventDispatcher := kafka.NewKafkaEventDispatcher(createUserUC, createTweetUC, deleteTweetUC)
+	process := kafka.DefaultKafkaWorkProcess(kafkaEventDispatcher, producer, cfg.KafkaUserConsumerConfig.DLQTopic)
+	go workQueue.Start(process, cfg.KafkaUserConsumerConfig.RetryConfig.MaxRetryDuration)
 	defer workQueue.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kafkaEventDispatcher := kafka.NewKafkaEventDispatcher(createUserUC, createTweetUC, deleteTweetUC)
-
-	kafka.StartKafkaConsumers(ctx, cfg, kafkaEventDispatcher, producer, workQueue)
+	go kafka.StartKafkaConsumers(ctx, cfg, kafkaEventDispatcher, producer, workQueue)
 
 	// Inicializar Gin
 	r := gin.Default()

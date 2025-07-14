@@ -66,7 +66,7 @@ func (c *AuthConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		sess.MarkMessage(&msg, "")
 	}
 
-	c.WorkQueue.Start(process, c.Config.RetryConfig.MaxRetryDuration)
+	go c.WorkQueue.Start(process, c.Config.RetryConfig.MaxRetryDuration)
 	defer c.WorkQueue.Stop()
 
 	for msg := range claim.Messages() {
