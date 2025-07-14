@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/Drivello/Twittah/services/auth/internal/common"
+	"github.com/Drivello/Twittah/services/auth/internal/metrics"
 	"github.com/Drivello/Twittah/services/auth/internal/ports"
 	"go.uber.org/zap"
 )
@@ -39,11 +40,14 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 		}
 		err := HandleUserCreate(ctx, d.registerUserUseCasesPort, userReq.Payload)
 		if err != nil {
+			metrics.AuthRegisterUserFailureTotal.Inc()
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
+
+		metrics.AuthRegisterUserSuccessTotal.Inc()
 		return nil
 
 	default:

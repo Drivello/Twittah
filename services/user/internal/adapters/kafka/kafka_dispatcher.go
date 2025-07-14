@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/Drivello/Twittah/services/user/internal/common"
+	"github.com/Drivello/Twittah/services/user/internal/metrics"
 	"github.com/Drivello/Twittah/services/user/internal/ports"
 	"go.uber.org/zap"
 )
@@ -34,50 +35,71 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 
 	switch req.EventType {
 	case "users.created", "users.created.dlq":
-
 		var userCreatedRequest KafkaUserCreatedRequest
+
 		if err := json.Unmarshal(data, &userCreatedRequest); err != nil {
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
-		err := HandleUserCreated(ctx, d.UserCreatedUC, userCreatedRequest.Payload)
-		return returnEventError(err, req)
 
+		err := HandleUserCreated(ctx, d.UserCreatedUC, userCreatedRequest.Payload)
+		if err != nil {
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+
+		return nil
 	case "users.follow", "users.follow.dlq":
 		var followRequest KafkaFollowRequest
+		metrics.FollowsConsumerTotal.Inc()
+
 		if err := json.Unmarshal(data, &followRequest); err != nil {
+			metrics.FollowsErrorsTotal.Inc()
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
 		err := HandleUserFollow(ctx, d.FollowUC, followRequest.Payload)
-		return returnEventError(err, req)
+		if err != nil {
+			metrics.FollowsErrorsTotal.Inc()
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+
+		metrics.FollowsCreatedTotal.Inc()
+		return nil
 	case "users.unfollow", "users.unfollow.dlq":
 		var unfollowRequest KafkaFollowRequest
+		metrics.UnfollowsConsumerTotal.Inc()
+
 		if err := json.Unmarshal(data, &unfollowRequest); err != nil {
+			metrics.UnfollowsErrorsTotal.Inc()
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
 		err := HandleUserUnfollow(ctx, d.UnfollowUC, unfollowRequest.Payload)
-		return returnEventError(err, req)
+		if err != nil {
+			metrics.UnfollowsErrorsTotal.Inc()
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+
+		metrics.UnfollowsDoneTotal.Inc()
+		return nil
 	default:
 		common.Logger().Error("[KafkaEventDispatcher] Unknown event type. Skipping.", zap.String("event_type", req.EventType))
 		return nil
 	}
 
-}
-
-func returnEventError(err error, req KafkaEventRequest) *KafkaEventError {
-	if err != nil {
-		return &KafkaEventError{
-			EventType: req.EventType,
-			Error:     err,
-		}
-	}
-	return nil
 }

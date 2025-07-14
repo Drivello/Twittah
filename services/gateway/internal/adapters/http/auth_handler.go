@@ -1,7 +1,12 @@
 package http
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/Drivello/Twittah/services/gateway/internal/adapters/dto"
+	"github.com/Drivello/Twittah/services/gateway/internal/metrics"
 	"github.com/Drivello/Twittah/services/gateway/internal/ports"
 	"github.com/gin-gonic/gin"
 )
@@ -26,23 +31,38 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 }
 
 func (h *AuthHandler) RegisterUser(c *gin.Context) {
+	start := time.Now()
+	metrics.ActiveRequests.Inc()
+	defer func() {
+		metrics.ActiveRequests.Dec()
+		metrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, "users/register").Observe(time.Since(start).Seconds())
+	}()
+	status := http.StatusCreated
+	defer func() {
+		metrics.HTTPRequestTotal.WithLabelValues(c.Request.Method, fmt.Sprintf("%d", status)).Inc()
+	}()
+
 	var reqDTO dto.RegisterUserRequest
 	if err := c.ShouldBindJSON(&reqDTO); err != nil {
-		c.JSON(400, dto.RegisterUserResponse{Message: "Invalid request"})
+		status = http.StatusBadRequest
+		c.JSON(status, dto.RegisterUserResponse{Message: "Invalid request"})
 		return
 	}
 
 	if err := reqDTO.Validate(); err != nil {
-		c.JSON(400, dto.RegisterUserResponse{Message: "Invalid request"})
+		status = http.StatusBadRequest
+		c.JSON(status, dto.RegisterUserResponse{Message: "Invalid request"})
 		return
 	}
 
 	if err := h.registerUserUseCase.Execute(c, reqDTO.Username, reqDTO.Email, reqDTO.Password); err != nil {
+		status = http.StatusInternalServerError
 		//TODO: change http depending on error
-		c.JSON(500, dto.RegisterUserResponse{Message: "No se pudo registrar el usuario"})
+		c.JSON(status, dto.RegisterUserResponse{Message: "No se pudo registrar el usuario"})
 		return
 	}
 
 	resp := dto.RegisterUserResponse{Message: "Usuario registrado", Username: reqDTO.Username}
-	c.JSON(201, resp)
+	status = http.StatusCreated
+	c.JSON(status, resp)
 }

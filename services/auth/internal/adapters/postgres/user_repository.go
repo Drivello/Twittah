@@ -8,6 +8,7 @@ import (
 	userent "github.com/Drivello/Twittah/services/auth/ent/user"
 	"github.com/Drivello/Twittah/services/auth/internal/common"
 	"github.com/Drivello/Twittah/services/auth/internal/domain"
+	"github.com/Drivello/Twittah/services/auth/internal/metrics"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -36,6 +37,8 @@ func (r *PostgresUserRepository) CreateOrGetUser(ctx context.Context, user domai
 	}
 	user.Password = hashed
 
+	start := time.Now()
+
 	createdUser, err := r.Client.User.
 		Create().
 		SetUsername(user.Username).
@@ -44,6 +47,8 @@ func (r *PostgresUserRepository) CreateOrGetUser(ctx context.Context, user domai
 		SetCreatedAt(time.Now()).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
+
+	metrics.DatabaseRegisterUserQueryDuration_seconds.Observe(time.Since(start).Seconds())
 
 	if err == nil {
 		common.Logger().Info("[UserRepo] User created successfully", zap.Int64("id", createdUser.ID))

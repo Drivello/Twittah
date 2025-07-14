@@ -5,6 +5,7 @@ import (
 
 	"github.com/Drivello/Twittah/services/gateway/internal/common"
 	"github.com/IBM/sarama"
+	"github.com/Drivello/Twittah/services/gateway/internal/metrics"
 )
 
 type EventProducer[T any] struct {
@@ -37,6 +38,8 @@ func NewEventProducer[T any](brokers []string, topic string, builder KafkaEventR
 
 // PublishEvent publishes a KafkaEventRequest directly to Kafka.
 func (p *EventProducer[T]) PublishEvent(event KafkaEventRequest[T]) error {
+	metrics.KafkaProducedMessagesTotal.Inc()
+
 	common.Logger().Debug("[EventProducer] Publishing event " + event.EventType + " to topic " + p.Topic)
 
 	value, err := json.Marshal(event)

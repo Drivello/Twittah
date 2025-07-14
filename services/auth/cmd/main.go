@@ -16,6 +16,7 @@ import (
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/auth/internal/adapters/postgres"
 	"github.com/Drivello/Twittah/services/auth/internal/common"
+	"github.com/Drivello/Twittah/services/auth/internal/metrics"
 	"github.com/Drivello/Twittah/services/auth/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -29,10 +30,10 @@ func main() {
 	common.InitLogger(logLevel)
 	logger := common.Logger()
 	defer func() {
-	if err := logger.Sync(); err != nil {
-		logger.Error("Failed to sync logger", zap.Error(err))
-	}
-}()
+		if err := logger.Sync(); err != nil {
+			logger.Error("Failed to sync logger", zap.Error(err))
+		}
+	}()
 
 	// Load config
 	cfg := config.LoadConfig()
@@ -70,6 +71,10 @@ func main() {
 
 	// Setup Gin HTTP server
 	r := gin.Default()
+
+	metrics.Init()
+	r.GET("/metrics", gin.WrapH(metrics.Handler()))
+
 	handler := authhttp.NewAuthHandler(authUC)
 	healthHandler := authhttp.NewHealthHandler(cfg, entClient)
 	handler.RegisterRoutes(r)

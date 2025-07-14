@@ -88,7 +88,7 @@ func TestFollowUser_Success(t *testing.T) {
 	// act
 	router.ServeHTTP(rec, req)
 	// assert
-	assert.Equal(t, 200, rec.Code)
+	assert.Equal(t, 202, rec.Code)
 	assert.Contains(t, rec.Body.String(), "Ahora sigues al usuario")
 }
 
@@ -168,6 +168,6 @@ func TestUnfollowUser_Success(t *testing.T) {
 	// act
 	router.ServeHTTP(rec, req)
 	// assert
-	assert.Equal(t, 200, rec.Code)
+	assert.Equal(t, 202, rec.Code)
 	assert.Contains(t, rec.Body.String(), "Has dejado de seguir al usuario")
 }

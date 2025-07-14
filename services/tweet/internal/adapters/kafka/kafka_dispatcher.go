@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
+	"github.com/Drivello/Twittah/services/tweet/internal/metrics"
 	"github.com/Drivello/Twittah/services/tweet/internal/ports"
 	"go.uber.org/zap"
 )
@@ -46,40 +47,62 @@ func (d *KafkaEventDispatcher) Dispatch(ctx context.Context, data []byte) *Kafka
 			}
 		}
 		err := HandleUserCreated(ctx, d.UserCreatedUC, userCreatedRequest.Payload)
-		return returnEventError(err, req)
+		if err != nil {
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+		return nil
 	case "tweets.create", "tweets.create.dlq":
 		var tweetCreatedRequest KafkaCreateTweetRequest
+		metrics.TweetsCreationConsumedTotal.Inc()
+
 		if err := json.Unmarshal(data, &tweetCreatedRequest); err != nil {
+			metrics.TweetsCreatedErrorTotal.Inc()
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
+
 		err := HandleTweetCreated(ctx, d.TweetCreatedUC, tweetCreatedRequest.Payload)
-		return returnEventError(err, req)
+		if err != nil {
+			metrics.TweetsCreatedErrorTotal.Inc()
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+
+		metrics.TweetsCreatedTotal.Inc()
+		return nil
 	case "tweets.delete", "tweets.delete.dlq":
 		var tweetDeletedRequest KafkaDeleteTweetRequest
+		metrics.TweetsDeletionConsumedTotal.Inc()
+
 		if err := json.Unmarshal(data, &tweetDeletedRequest); err != nil {
+			metrics.TweetsDeletedErrorTotal.Inc()
 			return &KafkaEventError{
 				EventType: req.EventType,
 				Error:     err,
 			}
 		}
+
 		err := HandleTweetDeleted(ctx, d.TweetDeletedUC, tweetDeletedRequest.Payload)
-		return returnEventError(err, req)
+		if err != nil {
+			metrics.TweetsDeletedErrorTotal.Inc()
+			return &KafkaEventError{
+				EventType: req.EventType,
+				Error:     err,
+			}
+		}
+
+		metrics.TweetsDeletedTotal.Inc()
+		return nil
 	default:
 		common.Logger().Error("[KafkaEventDispatcher] Unknown event type. Skipping.", zap.String("event_type", req.EventType))
 		return nil
 	}
 
-}
-
-func returnEventError(err error, req KafkaEventRequest) *KafkaEventError {
-	if err != nil {
-		return &KafkaEventError{
-			EventType: req.EventType,
-			Error:     err,
-		}
-	}
-	return nil
 }

@@ -11,10 +11,10 @@ import (
 	"github.com/Drivello/Twittah/services/tweet/internal/adapters/postgres"
 	redisadapter "github.com/Drivello/Twittah/services/tweet/internal/adapters/redis"
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
+	"github.com/Drivello/Twittah/services/tweet/internal/metrics"
 	"github.com/Drivello/Twittah/services/tweet/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	_ "github.com/lib/pq"
@@ -24,10 +24,10 @@ func main() {
 	cfg := config.LoadConfig()
 	common.InitLogger(cfg.LogLevel)
 	defer func() {
-	if err := common.Logger().Sync(); err != nil {
-		common.Logger().Error("Failed to sync logger", zap.Error(err))
-	}
-}()
+		if err := common.Logger().Sync(); err != nil {
+			common.Logger().Error("Failed to sync logger", zap.Error(err))
+		}
+	}()
 
 	// Inicializar Ent (Postgres)
 	entClient, err := config.InitEntClient(cfg.PostgresDSN)
@@ -78,7 +78,7 @@ func main() {
 	// Inicializar Gin
 	r := gin.Default()
 
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.GET("/metrics", gin.WrapH(metrics.Handler()))
 
 	tweetGroup := r.Group("/")
 	tweetQueryHandler.RegisterRoutes(tweetGroup)

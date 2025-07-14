@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Drivello/Twittah/services/gateway/config"
+	"github.com/Drivello/Twittah/services/gateway/internal/metrics"
 )
 
 // main is the entry point for the Gateway Service.
@@ -29,10 +30,10 @@ func main() {
 	}
 	common.InitLogger(cfg.LogLevel)
 	defer func() {
-	if err := common.Logger().Sync(); err != nil {
-		common.Logger().Error("Failed to sync logger", zap.Error(err))
-	}
-}()
+		if err := common.Logger().Sync(); err != nil {
+			common.Logger().Error("Failed to sync logger", zap.Error(err))
+		}
+	}()
 
 	authProducer, userProducer, tweetProducer, err := config.InitKafkaProducers(cfg)
 	if err != nil {
@@ -62,6 +63,9 @@ func main() {
 	tweetQueryHandler := gwhttp.NewTweetQueryHandler(getTimelineUseCase, getTweetsFromMultipleUserIDsUseCase, getUserTweetsUseCase)
 
 	r := gin.Default()
+
+	metrics.Init()
+	r.GET("/metrics", gin.WrapH(metrics.Handler()))
 
 	// Middleware de autenticación global
 	r.Use(middleware.AuthMiddleware(cfg.AuthMicroserviceURL))

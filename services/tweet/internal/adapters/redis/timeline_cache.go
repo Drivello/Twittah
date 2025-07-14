@@ -8,6 +8,7 @@ import (
 
 	"github.com/Drivello/Twittah/services/tweet/internal/domain"
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
+	"github.com/Drivello/Twittah/services/tweet/internal/metrics"
 	redis "github.com/redis/go-redis/v9"
 )
 
@@ -31,6 +32,7 @@ func (c *TimelineCache) GetTimeline(ctx context.Context, userID string) ([]domai
 	for attempt, backoff := range []time.Duration{100 * time.Millisecond, 200 * time.Millisecond, 400 * time.Millisecond} {
 		res, err := c.client.Get(ctx, key).Result()
 		if err == redis.Nil {
+			metrics.TimelineCacheMisses.Inc()
 			common.Logger().Infof("Cache MISS for user %s", userID)
 			return nil, nil
 		} else if err != nil {
@@ -46,6 +48,7 @@ func (c *TimelineCache) GetTimeline(ctx context.Context, userID string) ([]domai
 		common.Logger().Errorf("Redis GET failed after retries for user %s: %v", userID, lastErr)
 		return nil, lastErr
 	}
+	metrics.TimelineCacheHits.Inc()
 	common.Logger().Infof("Cache HIT for user %s", userID)
 	var tweets []domain.Tweet
 	if err := json.Unmarshal([]byte(data), &tweets); err != nil {

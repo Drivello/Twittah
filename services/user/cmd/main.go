@@ -14,6 +14,7 @@ import (
 	"github.com/Drivello/Twittah/services/user/internal/adapters/kafka"
 	"github.com/Drivello/Twittah/services/user/internal/adapters/postgres"
 	"github.com/Drivello/Twittah/services/user/internal/common"
+	"github.com/Drivello/Twittah/services/user/internal/metrics"
 	"github.com/Drivello/Twittah/services/user/internal/usecase"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -24,10 +25,10 @@ func main() {
 	cfg := config.LoadConfig()
 	common.InitLogger(cfg.LogLevel)
 	defer func() {
-	if err := common.Logger().Sync(); err != nil {
-		common.Logger().Error("Failed to sync logger", zap.Error(err))
-	}
-}()
+		if err := common.Logger().Sync(); err != nil {
+			common.Logger().Error("Failed to sync logger", zap.Error(err))
+		}
+	}()
 
 	entClient, err := config.InitEntClient(cfg.PostgresDSN)
 	if err != nil {
@@ -66,11 +67,15 @@ func main() {
 
 	go kafka.StartKafkaConsumers(ctx, cfg, repo, kafkaEventDispatcher, producer, workQueue)
 
-	handler := userhttp.NewUserHandler(getFollowersUC, getFollowingUC)
-	r := gin.Default()
-	handler.RegisterRoutes(r)
-
+	userHandler := userhttp.NewUserHandler(getFollowersUC, getFollowingUC)
 	healthHandler := userhttp.NewHealthHandler(cfg, entClient)
+
+	r := gin.Default()
+
+	metrics.Init()
+	r.GET("/metrics", gin.WrapH(metrics.Handler()))
+
+	userHandler.RegisterRoutes(r)
 	healthHandler.RegisterRoutes(r)
 
 	// Graceful shutdown
