@@ -1,19 +1,29 @@
 package config
 
 import (
-	"os"
 	"time"
 
 	"github.com/Drivello/Twittah/services/auth/internal/common"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-// GetEnvAsDuration parses an environment variable as a time.Duration or returns the default.
+func ViperInit() {
+	viper.AutomaticEnv()
+}
+
+// getEnvAsDuration parses a config key as a time.Duration or returns the default.
 func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if valStr := os.Getenv(key); valStr != "" {
+	valStr := viper.GetString(key)
+	if valStr != "" {
 		val, err := time.ParseDuration(valStr)
 		if err != nil {
-			common.Logger().Error("Invalid duration for %s: %s, using default %v", zap.String("key", key), zap.String("value", valStr), zap.Duration("default", defaultVal))
+			common.Logger().Error(
+				"Invalid duration config value, using default",
+				zap.String("key", key),
+				zap.String("value", valStr),
+				zap.Duration("default", defaultVal),
+			)
 			return defaultVal
 		}
 		return val
@@ -21,18 +31,18 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 	return defaultVal
 }
 
-// MustGetEnv returns the value of the environment variable or fatals if not set.
+// mustGetEnv returns the value or fatals if not set.
 func mustGetEnv(key string) string {
-	val := os.Getenv(key)
+	val := viper.GetString(key)
 	if val == "" {
-		common.Logger().Fatalf("%s env var required", key)
+		common.Logger().Fatal(key + " env var/config required")
 	}
 	return val
 }
 
-// GetEnvOrDefault returns the value of the environment variable or the default if not set.
+// getEnvOrDefault returns the value or the default if not set.
 func getEnvOrDefault(key, def string) string {
-	val := os.Getenv(key)
+	val := viper.GetString(key)
 	if val == "" {
 		return def
 	}

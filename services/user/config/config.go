@@ -25,8 +25,10 @@ type Config struct {
 // LoadConfig loads configuration from environment variables. Returns a pointer to Config and error if any variable is missing.
 func LoadConfig() *Config {
 
+	ViperInit()
+
 	// Service
-	servicePort := mustGetEnv("USER_SERVICE_PORT")
+	servicePort := mustGetEnv("USER_PORT")
 	logLevel := getEnvOrDefault("LOG_LEVEL", "info")
 
 	// Database & Redis

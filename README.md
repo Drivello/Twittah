@@ -49,7 +49,6 @@
 ### 1️⃣ Prerrequisitos
 - Docker & Docker Compose (👉 **Imprescindible, todo el setup local fue pensado para Compose**)
 - Go 1.23
-- Make (opcional para scripts)
 
 ### 2️⃣ Clonar el repositorio
 ```bash
@@ -57,21 +56,18 @@ git clone https://github.com/tuusuario/twittah.git
 cd twittah
 ```
 
-### 3️⃣ Configurar variables de entorno
-Copia los archivos `.env-example` de cada servicio a `.env` y ajústalos según sea necesario.
-
-```bash
-cp services/auth/.env-example services/auth/.env
-cp services/user/.env-example services/user/.env
-cp services/tweet/.env-example services/tweet/.env
-cp services/gateway/.env-example services/gateway/.env
-```
-
-### 4️⃣ Levantar el entorno completo
+### 3️⃣ Levantar el entorno completo
 ```bash
 docker-compose up --build
 ```
 👉 **Nota:** El `docker-compose.yml` fue ajustado para manejar dependencias como Kafka, PostgreSQL y Redis de forma automática.
+
+
+### 4️⃣ Acceder a Postman Collections
+
+```bash
+cd Twittah_Gateway.postman_collection.json
+```
 
 ---
 

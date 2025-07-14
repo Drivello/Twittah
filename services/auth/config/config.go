@@ -23,6 +23,9 @@ type Config struct {
 
 // LoadConfig loads configuration from environment variables or .env file.
 func LoadConfig() *Config {
+
+	ViperInit()
+
 	// Service
 	port := mustGetEnv("AUTH_PORT")
 	logLevel := getEnvOrDefault("LOG_LEVEL", "info")

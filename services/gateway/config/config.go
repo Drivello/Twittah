@@ -23,6 +23,9 @@ type GatewayConfig struct {
 // LoadConfig loads all required configuration from environment variables.
 // Returns a pointer to GatewayConfig and error if any variable is missing.
 func LoadConfig() (*GatewayConfig, error) {
+
+	ViperInit()
+
 	// Service
 	port := mustGetEnv("GATEWAY_PORT")
 	logLevel := getEnvOrDefault("LOG_LEVEL", "info")

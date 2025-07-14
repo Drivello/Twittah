@@ -1,13 +1,54 @@
 package config
 
 import (
-	"os"
 	"strconv"
 	"time"
 
 	"github.com/Drivello/Twittah/services/tweet/internal/common"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
+
+func ViperInit() {
+	viper.AutomaticEnv()
+}
+
+// getEnvAsDuration parses a config key as a time.Duration or returns the default.
+func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
+	valStr := viper.GetString(key)
+	if valStr != "" {
+		val, err := time.ParseDuration(valStr)
+		if err != nil {
+			common.Logger().Error(
+				"Invalid duration config value, using default",
+				zap.String("key", key),
+				zap.String("value", valStr),
+				zap.Duration("default", defaultVal),
+			)
+			return defaultVal
+		}
+		return val
+	}
+	return defaultVal
+}
+
+// mustGetEnv returns the value or fatals if not set.
+func mustGetEnv(key string) string {
+	val := viper.GetString(key)
+	if val == "" {
+		common.Logger().Fatal(key + " env var/config required")
+	}
+	return val
+}
+
+// getEnvOrDefault returns the value or the default if not set.
+func getEnvOrDefault(key, def string) string {
+	val := viper.GetString(key)
+	if val == "" {
+		return def
+	}
+	return val
+}
 
 // getEnvAsInt obtiene una variable de entorno como int, o retorna el default si no existe o es inválido.
 func getEnvAsInt(key string, defaultVal int) int {
@@ -18,37 +59,6 @@ func getEnvAsInt(key string, defaultVal int) int {
 	val, err := strconv.Atoi(valStr)
 	if err != nil {
 		return defaultVal
-	}
-	return val
-}
-
-// GetEnvAsDuration parses an environment variable as a time.Duration or returns the default.
-func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if valStr := os.Getenv(key); valStr != "" {
-		val, err := time.ParseDuration(valStr)
-		if err != nil {
-			common.Logger().Error("Invalid duration for %s: %s, using default %v", zap.String("key", key), zap.String("value", valStr), zap.Duration("default", defaultVal))
-			return defaultVal
-		}
-		return val
-	}
-	return defaultVal
-}
-
-// MustGetEnv returns the value of the environment variable or fatals if not set.
-func mustGetEnv(key string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		common.Logger().Fatalf("%s env var required", key)
-	}
-	return val
-}
-
-// GetEnvOrDefault returns the value of the environment variable or the default if not set.
-func getEnvOrDefault(key, def string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return def
 	}
 	return val
 }

@@ -29,6 +29,9 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
+
+	ViperInit()
+
 	// Service
 	port := mustGetEnv("TWEET_PORT")
 	logLevel := getEnvOrDefault("LOG_LEVEL", "info")
