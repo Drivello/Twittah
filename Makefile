@@ -39,11 +39,19 @@ tidy:
 		cd - > /dev/null ; \
 	done
 
+envs:
+	@for service in $(SERVICES); do \
+		if [ ! -f "$(SERVICES_DIR)/$$service/.env" ]; then \
+			echo "Creando .env vacío para $$service..."; \
+				touch "$(SERVICES_DIR)/$$service/.env"; \
+		fi \
+	done
+
 run:
 	docker-compose up --build
 
 docker-compose:
 	docker-compose up
 
-all-up: tidy build test lint run
+all-up: envs tidy build test lint run
 	@echo "✅ Proyecto compilado, testeado, linter OK y contenedores corriendo 🚀"
