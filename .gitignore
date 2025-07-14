@@ -1,0 +1,51 @@
+*# Go build artifacts
+/bin/
+/pkg/
+/vendor/
+/**/bin/
+/**/pkg/
+
+# Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Logs
+*.log
+
+# Dependency directories (Go modules)
+go.sum
+go.work.sum
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Env files (all services)
+/services/**/.env
+.env
+
+# Docker
+docker-compose.override.yml
+
+# Challenge documentation folder
+/docs-challenge/
+
+# Coverage files
+coverage.out
+
+# Temporary files
+*.tmp
+*.bak
+
+# Kafka and Redis data
+/kafka-data/
+/redis-data/

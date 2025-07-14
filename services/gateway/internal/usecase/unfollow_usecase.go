@@ -1,0 +1,33 @@
+package usecase
+
+import (
+	"context"
+
+	"github.com/Drivello/Twittah/services/gateway/internal/adapters/kafka"
+	"github.com/Drivello/Twittah/services/gateway/internal/ports"
+)
+
+// UnfollowUseCase implements the user logic and fulfills the hexagonal port UnfollowUserUseCasePort.
+
+type UnfollowUseCase struct {
+	Producer ports.EventProducerPort[kafka.UserPayload]
+}
+
+var _ ports.UnfollowUserUseCasePort = (*UnfollowUseCase)(nil)
+
+// NewUnfollowUseCase creates a new UnfollowUseCase.
+func NewUnfollowUseCase(producer ports.EventProducerPort[kafka.UserPayload]) *UnfollowUseCase {
+	return &UnfollowUseCase{Producer: producer}
+}
+
+// Execute handles unfollow logic.
+func (uc *UnfollowUseCase) Execute(ctx context.Context, followerID, followeeID int64) error {
+	event := kafka.KafkaEventRequest[kafka.UserPayload]{
+		EventType: "users.unfollow",
+		Payload: kafka.KafkaFollowPayload{
+			FollowerID: followerID,
+			FolloweeID: followeeID,
+		},
+	}
+	return uc.Producer.PublishEvent(event)
+}

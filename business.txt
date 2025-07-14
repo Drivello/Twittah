@@ -1,0 +1,62 @@
+============================================================
+            Twitter-like Platform – MVP
+============================================================
+
+Current Assumptions (MVP)
+------------------------------------------------------------
+1. AUTHENTICATION
+   - All users are valid. No registration/login required.
+   - The user identifier will be a string in the header (X-User-Id).
+   - AuthService will validate users on each request using only the header.
+
+2. TWEETS
+   - Maximum limit: 280 characters.
+   - Tweets are stored in TweetService and used in Timelines.
+
+3. FOLLOWING
+   - Users can follow and unfollow other users (follower → following) via events.
+   - UserService consumes Kafka events to update following relationships.
+
+4. TIMELINE
+   - Timeline shows tweets from followed users.
+   - GatewayService orchestrates calls to UserService and TweetService via Kafka events.
+   - TweetService clears cached Timelines when tweets are added/removed from a Timeline.
+
+5. ARCHITECTURE
+   - Hexagonal Architecture (Ports & Adapters).
+   - 4 independent services:
+     • GatewayService (Orchestrator)
+     • AuthService
+     • UserService
+     • TweetService
+
+6. PERSISTENCE
+   - One PostgreSQL instance per service, except for Gateway.
+   - Redis in TweetService to cache timelines.
+
+7. MESSAGING
+   - Apache Kafka as the event bus for microservice communication.
+   - Defined topics:
+     • tweets.published → new tweet created.
+     • follows.created → follow relationship created.
+     • follows.deleted → follow relationship removed.
+     • timelines.update → user timeline update.
+
+8. TECHNOLOGIES
+   - Language: Golang
+   - Containerization: Docker + docker-compose
+   - Version control: Git
+   - Observability: Prometheus + Grafana
+
+9. TESTING
+   - Minimum coverage: 30% unit tests.
+
+10. SCALABILITY
+     - Service communication: Kafka / REST.
+     - Designed for millions of concurrent users.
+
+------------------------------------------------------------
+
+Future objectives in README.md
+
+============================================================

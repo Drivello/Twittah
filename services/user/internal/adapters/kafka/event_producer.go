@@ -1,0 +1,92 @@
+package kafka
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/Drivello/Twittah/services/user/internal/common"
+	"github.com/IBM/sarama"
+)
+
+type EventProducer struct {
+	Producer sarama.SyncProducer
+	Topic    string
+}
+
+// NewEventProducer creates a new EventProducer for the given brokers and topic.
+func NewEventProducer(brokers []string, topic string) (*EventProducer, error) {
+	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Producer.Return.Successes = true
+	producer, err := sarama.NewSyncProducer(brokers, config)
+	if err != nil {
+		common.Logger().Error("[EventProducer] Failed to create SyncProducer", "error", err)
+		return nil, err
+	}
+	common.Logger().Info("[EventProducer] SyncProducer created successfully.", " brokers ", brokers, " topic ", topic)
+	return &EventProducer{Producer: producer, Topic: topic}, nil
+}
+
+// BuildKafkaEventRequest builds the correct request for each event type.
+func BuildKafkaEventRequest(eventType string, payload interface{}) (interface{}, error) {
+	switch eventType {
+	case "users.created":
+		userPayload, ok := payload.(KafkaUserCreatedPayload)
+		if !ok {
+			if uptr, ok2 := payload.(*KafkaUserCreatedPayload); ok2 && uptr != nil {
+				userPayload = *uptr
+				ok = true
+			}
+		}
+		if !ok {
+			return nil, fmt.Errorf("payload must be KafkaUserCreatedPayload for users.created, got %T", payload)
+		}
+		return KafkaUserCreatedRequest{
+			EventType: eventType,
+			Payload:   userPayload,
+		}, nil
+	case "users.follow", "users.unfollow":
+		followPayload, ok := payload.(KafkaFollowPayload)
+		if !ok {
+			if uptr, ok2 := payload.(*KafkaFollowPayload); ok2 && uptr != nil {
+				followPayload = *uptr
+				ok = true
+			}
+		}
+		if !ok {
+			return nil, fmt.Errorf("payload must be KafkaFollowPayload for %s, got %T", eventType, payload)
+		}
+		return KafkaFollowRequest{
+			EventType: eventType,
+			Payload:   followPayload,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported event type: %s", eventType)
+	}
+}
+
+// PublishEvent publishes an event to Kafka using the centralized builder.
+func (p *EventProducer) PublishEvent(eventType string, payload interface{}) error {
+	common.Logger().Debug("[UserEventProducer] Publishing event "+eventType+" to topic "+p.Topic, "event_type", eventType)
+	event, err := BuildKafkaEventRequest(eventType, payload)
+	if err != nil {
+		common.Logger().Error("[UserEventProducer] BuildKafkaEventRequest error", "event_type", eventType, "error", err)
+		return err
+	}
+	value, err := json.Marshal(event)
+	if err != nil {
+		common.Logger().Error("[UserEventProducer] Failed to marshal event "+eventType, "error", err)
+		return err
+	}
+	msg := &sarama.ProducerMessage{
+		Topic: p.Topic,
+		Value: sarama.ByteEncoder(value),
+	}
+	_, _, err = p.Producer.SendMessage(msg)
+	if err != nil {
+		common.Logger().Error("[UserEventProducer] Failed to publish event "+eventType, "error", err)
+		return err
+	}
+	common.Logger().Debug("[UserEventProducer] event " + eventType + " published")
+	return nil
+}

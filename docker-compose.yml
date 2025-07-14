@@ -1,0 +1,305 @@
+
+services:
+  kafka:
+    image: bitnami/kafka:3.7
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_KRAFT_CLUSTER_ID=twittah-cluster-id
+      - KAFKA_CREATE_TOPICS=users.events,follows.events,tweets.events,timelines.updated
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_FOLLOWS_TOPIC=follows.events
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TIMELINE_TOPIC=timelines.updated
+      - KAFKA_GROUP_ID=twittah-group
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/bitnami/kafka/bin/kafka-topics.sh",
+          "--bootstrap-server",
+          "kafka:9092",
+          "--list",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  kafka-init:
+    image: bitnami/kafka:3.7
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c", "/init-topics.sh"]
+    volumes:
+      - ./scripts/init-topics.sh:/init-topics.sh:ro
+      - kafka-data:/bitnami/kafka
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - REPLICATION_FACTOR=1
+      - PARTITIONS=1
+
+  postgres-auth:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=auth
+      - POSTGRES_PASSWORD=auth
+      - POSTGRES_DB=auth
+    ports:
+      - "5435:5432"
+    volumes:
+    - pgdata-auth:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-user:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=user
+      - POSTGRES_DB=user
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-user:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-tweet:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=tweet
+      - POSTGRES_PASSWORD=tweet
+      - POSTGRES_DB=tweet
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-tweet:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tweet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-tweet:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata-tweet:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build:
+      context: ./services/gateway
+    environment:
+      # --- Service ---
+      - GATEWAY_PORT=8081
+      - LOG_LEVEL=debug
+
+      # --- Microservices ---
+      - AUTH_MICROSERVICE_URL=http://auth:8082
+      - USER_MICROSERVICE_URL=http://user:8083
+      - TWEET_MICROSERVICE_URL=http://tweet:8084
+
+      # --- Kafka ---
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_AUTH_TOPIC=auth.events
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TIMELINE_TOPIC=timelines.updated
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      user:
+        condition: service_started
+      tweet:
+        condition: service_started
+    ports:
+      - "8081:8081"
+
+  auth:
+    build:
+      context: ./services/auth
+    environment:
+      # --- Service ---
+      - AUTH_PORT=8082
+      - LOG_LEVEL=debug
+
+      # --- Database ---
+      - AUTH_POSTGRES_DSN=postgres://auth:auth@postgres-auth:5432/auth?sslmode=disable
+
+      # --- Kafka ---
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_USER_TOPIC=users.events
+
+      # --- Kafka Auth Consumer Config ---
+      - KAFKA_AUTH_CONSUMER_GROUP_NAME=authms-auth-user-event-group
+      - KAFKA_AUTH_TOPIC=auth.events
+      - KAFKA_AUTH_DLQ_TOPIC=auth.events.dlq
+      - KAFKA_AUTH_DLQ_TTL=168h
+      - KAFKA_AUTH_RETRY_MAX_DURATION=2h
+      - KAFKA_AUTH_RETRY_MAX_BACKOFF=300s
+      - KAFKA_AUTH_RETRY_INITIAL_BACKOFF=5s
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8082:8082"
+
+  user:
+    build:
+      context: ./services/user
+    environment:
+      # Service
+      - USER_PORT=8083
+      - LOG_LEVEL=debug
+
+      # Database & Redis
+      - REDIS_ADDR=redis-tweet:6379
+      - USER_POSTGRES_DSN=postgres://user:user@postgres-user:5432/user?sslmode=disable
+
+      # Kafka
+      - KAFKA_BROKERS=kafka:9092
+
+      # Kafka User Consumer
+      - KAFKA_USER_GROUP=userms-user-service-group
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_USER_TOPIC_DLQ=users.events.dlq
+      - KAFKA_USER_TOPIC_DLQ_TTL=168h
+      - KAFKA_USER_TOPIC_RETRY_MAX_DURATION=2h
+      - KAFKA_USER_TOPIC_RETRY_MAX_BACKOFF=300s
+      - KAFKA_USER_TOPIC_RETRY_INITIAL_BACKOFF=5s
+
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis-tweet:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8083:8083"
+
+  tweet:
+    build:
+      context: ./services/tweet
+    environment:
+      # --- Service ---
+      - TWEET_PORT=8084
+      - LOG_LEVEL=debug
+
+      # --- Microservices ---
+      - AUTH_MICROSERVICE_URL=http://auth:8082
+      - USER_MICROSERVICE_URL=http://user:8083
+
+      # --- Database ---
+      - TWEET_POSTGRES_DSN=postgres://tweet:tweet@postgres-tweet:5432/tweet?sslmode=disable
+      - TWEET_REDIS_ADDR=redis-tweet:6379
+      - TIMELINE_TTL_HOURS=24
+
+      # --- Kafka ---
+      - KAFKA_BROKERS=kafka:9092
+
+      # Kafka User Consumer
+      - KAFKA_USER_GROUP=tweetms-user-service-group
+      - KAFKA_USER_TOPIC=users.events
+      - KAFKA_USER_TOPIC_DLQ=users.events.dlq
+      - KAFKA_USER_TOPIC_DLQ_TTL=168h
+      - KAFKA_USER_TOPIC_RETRY_MAX_DURATION=2h
+      - KAFKA_USER_TOPIC_RETRY_MAX_BACKOFF=300s
+      - KAFKA_USER_TOPIC_RETRY_INITIAL_BACKOFF=5s
+
+      # --- Kafka Tweet Consumer Config ---
+      - KAFKA_TWEET_CONSUMER_GROUP_NAME=tweetms-tweet-service-group
+      - KAFKA_TWEET_TOPIC=tweets.events
+      - KAFKA_TWEET_DLQ_TOPIC=tweets.events.dlq
+      - KAFKA_TWEET_DLQ_TTL=168h
+      - KAFKA_TWEET_RETRY_MAX_DURATION=2h
+      - KAFKA_TWEET_RETRY_MAX_BACKOFF=300s
+      - KAFKA_TWEET_RETRY_INITIAL_BACKOFF=5s
+    depends_on:
+      postgres-tweet:
+        condition: service_healthy
+      redis-tweet:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8084:8084"
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090" # UI en http://localhost:9090
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # UI en http://localhost:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-auth:
+  pgdata-user:
+  pgdata-tweet:
+  redisdata-tweet:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
